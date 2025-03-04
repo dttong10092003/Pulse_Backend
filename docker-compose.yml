@@ -1,0 +1,26 @@
+services:
+  api-gateway:
+    build:
+      context: ./api-gateway # Chỉ ra nơi có Dockerfile của api-gateway
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:5000/auth
+
+  auth-service:
+    build:
+      context: ./auth-service # Chỉ ra nơi có Dockerfile của auth-service
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGODB_URI=mongodb+srv://auth123:auth123@cluster0.gmid9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - JWT_SECRET=mySuperSecretKey12345!@#123
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
