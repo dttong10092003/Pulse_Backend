@@ -8,6 +8,7 @@ services:
       - auth-service
     environment:
       - AUTH_SERVICE_URL=http://auth-service:5000/auth
+      - POST_SERVICE_URL=http://post-service:5001/posts
 
   auth-service:
     build:
@@ -19,6 +20,17 @@ services:
       - JWT_SECRET=mySuperSecretKey12345!@#123
     depends_on:
       - mongo
+
+  post-service:
+    build:
+      context: ./post-service
+    ports:
+      - "5001:5001"
+    environment:
+      - MONGODB_URI=mongodb+srv://auth123:auth123@cluster0.gmid9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - JWT_SECRET=mySuperSecretKey12345!@#123
+    depends_on:
+      - mongo 
 
   mongo:
     image: mongo
