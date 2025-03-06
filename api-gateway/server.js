@@ -1,6 +1,7 @@
 const express = require("express");
 const axios = require("axios");
 const dotenv = require("dotenv");
+
 dotenv.config();
 
 const app = express();
@@ -10,29 +11,68 @@ const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL;
 const POST_SERVICE_URL = process.env.POST_SERVICE_URL;
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL;
 
-// Định tuyến cho Auth Service (Đăng ký)
-app.post("/auth/register", async (req, res) => {
+// Middleware xác thực JWT (Dùng cho các API cần xác thực)
+const authenticateToken = async (req, res, next) => {
+  const token = req.header("Authorization");
+  if (!token) return res.status(401).json({ message: "Access Denied" });
+
   try {
-    const response = await axios.post(`${AUTH_SERVICE_URL}/register`, req.body);
+    const response = await axios.get(`${AUTH_SERVICE_URL}/auth/verify-token`, {
+      headers: { Authorization: token },
+    });
+
+    req.user = response.data; // Lưu thông tin user đã xác thực
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: "Invalid Token" });
+  }
+};
+
+// Kiểm tra số điện thoại hoặc email trước khi đăng ký
+app.post("/auth/check-user", async (req, res) => {
+  try {
+    console.log("🔹 Forwarding request to AUTH_SERVICE:", `${AUTH_SERVICE_URL}/check-user`); 
+    const response = await axios.post(`${AUTH_SERVICE_URL}/check-user`, req.body);
     res.status(response.status).json(response.data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
   }
 });
 
-// Định tuyến cho Auth Service (Đăng nhập)
-app.post("/auth/login", async (req, res) => {
+// Đăng ký bằng số điện thoại + username + password
+app.post("/auth/register/phone", async (req, res) => {
   try {
-    const response = await axios.post(`${AUTH_SERVICE_URL}/login`, req.body);
+    const response = await axios.post(`${AUTH_SERVICE_URL}/auth/register/phone`, req.body);
     res.status(response.status).json(response.data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
   }
 });
-// Định tuyến cho Post Service (Tạo bài viết - CẦN token)
-app.post("/posts", async (req, res) => {
+
+// Đăng ký / Đăng nhập bằng Google OAuth2
+app.post("/auth/login/google", async (req, res) => {
   try {
-    console.log("🔹 Token received in API Gateway:", req.headers.authorization); // Debug token tại API Gateway
+    const response = await axios.post(`${AUTH_SERVICE_URL}/auth/login/google`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+});
+
+// Đăng nhập bằng username/password
+app.post("/auth/login", async (req, res) => {
+  try {
+    const response = await axios.post(`${AUTH_SERVICE_URL}/auth/login`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+});
+
+// Định tuyến cho Post Service (Tạo bài viết - CẦN token)
+app.post("/posts", authenticateToken, async (req, res) => {
+  try {
+    console.log("🔹 Token received in API Gateway:", req.headers.authorization);
 
     const response = await axios.post(`${POST_SERVICE_URL}/`, req.body, {
       headers: { Authorization: req.headers.authorization },
@@ -40,9 +80,7 @@ app.post("/posts", async (req, res) => {
 
     res.status(response.status).json(response.data);
   } catch (error) {
-    res
-      .status(error.response?.status || 500)
-      .json({ error: error.response?.data?.message || error.message });
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
   }
 });
 
@@ -52,70 +90,48 @@ app.get("/posts", async (req, res) => {
     const response = await axios.get(`${POST_SERVICE_URL}/`);
     res.status(response.status).json(response.data);
   } catch (error) {
-    res
-      .status(error.response?.status || 500)
-      .json({ error: error.response?.data?.message || error.message });
-  }
-});
-
-// Định tuyến cho Post Service (Lấy bài viết theo ID - KHÔNG cần token)
-app.get("/posts/:id", async (req, res) => {
-  try {
-    const response = await axios.get(`${POST_SERVICE_URL}/${req.params.id}`);
-    res.status(response.status).json(response.data);
-  } catch (error) {
-    res
-      .status(error.response?.status || 500)
-      .json({ error: error.response?.data?.message || error.message });
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
   }
 });
 
 // Định tuyến cho Post Service (Xóa bài viết - CẦN token)
-app.delete("/posts/:id", async (req, res) => {
+app.delete("/posts/:id", authenticateToken, async (req, res) => {
   try {
-    const response = await axios.delete(
-      `${POST_SERVICE_URL}/${req.params.id}`,
-      {
-        headers: { Authorization: req.headers.authorization }, // Chuyển tiếp token
-      }
-    );
+    const response = await axios.delete(`${POST_SERVICE_URL}/${req.params.id}`, {
+      headers: { Authorization: req.headers.authorization },
+    });
     res.status(response.status).json(response.data);
   } catch (error) {
-    res
-      .status(error.response?.status || 500)
-      .json({ error: error.response?.data?.message || error.message });
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
   }
 });
+
 // Định tuyến cho User Service
-app.get("/users/:id", async (req, res) => {
+app.get("/users/:id", authenticateToken, async (req, res) => {
   try {
-    const response = await axios.get(
-      `${USER_SERVICE_URL}/users/${req.params.id}`
-    );
+    const response = await axios.get(`${USER_SERVICE_URL}/users/${req.params.id}`);
     res.status(response.status).json(response.data);
   } catch (error) {
     res.status(error.response?.status || 500).json({ error: error.message });
   }
 });
 
-app.put("/users/:id", async (req, res) => {
+// Cập nhật thông tin người dùng (CẦN token)
+app.put("/users/:id", authenticateToken, async (req, res) => {
   try {
-    const response = await axios.put(
-      `${USER_SERVICE_URL}/users/${req.params.id}`,
-      req.body,
-      {
-        headers: { Authorization: req.headers.authorization },
-      }
-    );
+    const response = await axios.put(`${USER_SERVICE_URL}/users/${req.params.id}`, req.body, {
+      headers: { Authorization: req.headers.authorization },
+    });
     res.status(response.status).json(response.data);
   } catch (error) {
     res.status(error.response?.status || 500).json({ error: error.message });
   }
 });
 
+// Tạo người dùng mới (CÓ THỂ BỎ)
 app.post("/users", async (req, res) => {
   try {
-    console.log("🔹 Forwarding request to User Service:", `${USER_SERVICE_URL}/users`); // Debug
+    console.log("🔹 Forwarding request to User Service:", `${USER_SERVICE_URL}/users`);
 
     const response = await axios.post(`${USER_SERVICE_URL}/users`, req.body);
     res.status(response.status).json(response.data);
@@ -125,8 +141,12 @@ app.post("/users", async (req, res) => {
   }
 });
 
+// API kiểm tra hoạt động của Gateway
+app.get("/", (req, res) => {
+  res.send("🚀 API Gateway is running!");
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`API Gateway is running on port ${PORT}`);
+  console.log(`🚀 API Gateway is running on port ${PORT}`);
 });
