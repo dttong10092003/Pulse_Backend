@@ -8,6 +8,7 @@ app.use(express.json());
 
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL;
 const POST_SERVICE_URL = process.env.POST_SERVICE_URL;
+const USER_SERVICE_URL = process.env.USER_SERVICE_URL;
 
 // Định tuyến cho Auth Service (Đăng ký)
 app.post("/auth/register", async (req, res) => {
@@ -30,51 +31,100 @@ app.post("/auth/login", async (req, res) => {
 });
 // Định tuyến cho Post Service (Tạo bài viết - CẦN token)
 app.post("/posts", async (req, res) => {
-    try {
-      console.log("🔹 Token received in API Gateway:", req.headers.authorization); // Debug token tại API Gateway
-  
-      const response = await axios.post(`${POST_SERVICE_URL}/`, req.body, {
-        headers: { Authorization: req.headers.authorization },
-      });
-  
-      res.status(response.status).json(response.data);
-    } catch (error) {
-      res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
-    }
-  });
-  
-  
-  // Định tuyến cho Post Service (Lấy danh sách bài viết - KHÔNG cần token)
-  app.get("/posts", async (req, res) => {
-    try {
-      const response = await axios.get(`${POST_SERVICE_URL}/`);
-      res.status(response.status).json(response.data);
-    } catch (error) {
-      res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
-    }
-  });
-  
-  // Định tuyến cho Post Service (Lấy bài viết theo ID - KHÔNG cần token)
-  app.get("/posts/:id", async (req, res) => {
-    try {
-      const response = await axios.get(`${POST_SERVICE_URL}/${req.params.id}`);
-      res.status(response.status).json(response.data);
-    } catch (error) {
-      res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
-    }
-  });
-  
-  // Định tuyến cho Post Service (Xóa bài viết - CẦN token)
-  app.delete("/posts/:id", async (req, res) => {
-    try {
-      const response = await axios.delete(`${POST_SERVICE_URL}/${req.params.id}`, {
+  try {
+    console.log("🔹 Token received in API Gateway:", req.headers.authorization); // Debug token tại API Gateway
+
+    const response = await axios.post(`${POST_SERVICE_URL}/`, req.body, {
+      headers: { Authorization: req.headers.authorization },
+    });
+
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res
+      .status(error.response?.status || 500)
+      .json({ error: error.response?.data?.message || error.message });
+  }
+});
+
+// Định tuyến cho Post Service (Lấy danh sách bài viết - KHÔNG cần token)
+app.get("/posts", async (req, res) => {
+  try {
+    const response = await axios.get(`${POST_SERVICE_URL}/`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res
+      .status(error.response?.status || 500)
+      .json({ error: error.response?.data?.message || error.message });
+  }
+});
+
+// Định tuyến cho Post Service (Lấy bài viết theo ID - KHÔNG cần token)
+app.get("/posts/:id", async (req, res) => {
+  try {
+    const response = await axios.get(`${POST_SERVICE_URL}/${req.params.id}`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res
+      .status(error.response?.status || 500)
+      .json({ error: error.response?.data?.message || error.message });
+  }
+});
+
+// Định tuyến cho Post Service (Xóa bài viết - CẦN token)
+app.delete("/posts/:id", async (req, res) => {
+  try {
+    const response = await axios.delete(
+      `${POST_SERVICE_URL}/${req.params.id}`,
+      {
         headers: { Authorization: req.headers.authorization }, // Chuyển tiếp token
-      });
-      res.status(response.status).json(response.data);
-    } catch (error) {
-      res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
-    }
-  });
+      }
+    );
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res
+      .status(error.response?.status || 500)
+      .json({ error: error.response?.data?.message || error.message });
+  }
+});
+// Định tuyến cho User Service
+app.get("/users/:id", async (req, res) => {
+  try {
+    const response = await axios.get(
+      `${USER_SERVICE_URL}/users/${req.params.id}`
+    );
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.message });
+  }
+});
+
+app.put("/users/:id", async (req, res) => {
+  try {
+    const response = await axios.put(
+      `${USER_SERVICE_URL}/users/${req.params.id}`,
+      req.body,
+      {
+        headers: { Authorization: req.headers.authorization },
+      }
+    );
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.message });
+  }
+});
+
+app.post("/users", async (req, res) => {
+  try {
+    console.log("🔹 Forwarding request to User Service:", `${USER_SERVICE_URL}/users`); // Debug
+
+    const response = await axios.post(`${USER_SERVICE_URL}/users`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    console.error("❌ Error forwarding to User Service:", error.message);
+    res.status(error.response?.status || 500).json({ error: error.message });
+  }
+});
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

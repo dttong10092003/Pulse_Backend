@@ -9,6 +9,7 @@ services:
     environment:
       - AUTH_SERVICE_URL=http://auth-service:5000/auth
       - POST_SERVICE_URL=http://post-service:5001/posts
+      - USER_SERVICE_URL=http://user-service:5002
 
   auth-service:
     build:
@@ -30,6 +31,16 @@ services:
       - MONGODB_URI=mongodb+srv://pulse:pulse@pulse.01h26.mongodb.net/?retryWrites=true&w=majority&appName=Pulse
       - AUTH_SERVICE_URL=http://auth-service:5000/auth
       - JWT_SECRET=mySuperSecretKey12345!@#123
+    depends_on:
+      - mongo 
+
+  user-service:
+    build:
+      context: ./user-service
+    ports:
+      - "5002:5002"
+    environment:
+      - MONGODB_URI=mongodb+srv://auth123:auth123@cluster0.gmid9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
     depends_on:
       - mongo 
 
