@@ -21,13 +21,14 @@ services:
     depends_on:
       - mongo
 
-  post-service:
+  post-service: 
     build:
-      context: ./post-service
+      context: ./post-service # Chỉ ra nơi có Dockerfile của post-service
     ports:
       - "5001:5001"
     environment:
-      - MONGODB_URI=mongodb+srv://auth123:auth123@cluster0.gmid9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - MONGODB_URI=mongodb+srv://pulse:pulse@pulse.01h26.mongodb.net/?retryWrites=true&w=majority&appName=Pulse
+      - AUTH_SERVICE_URL=http://auth-service:5000/auth
       - JWT_SECRET=mySuperSecretKey12345!@#123
     depends_on:
       - mongo 
