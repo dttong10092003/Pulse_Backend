@@ -4,7 +4,7 @@ const POST_SERVICE_URL = process.env.POST_SERVICE_URL;
 
 const createPost = async (req, res) => {
   try {
-    const response = await axios.post(`${POST_SERVICE_URL}/`, req.body, {
+    const response = await axios.post(`${POST_SERVICE_URL}/posts`, req.body, {
       headers: { Authorization: req.headers.authorization },
     });
     res.status(response.status).json(response.data);
@@ -15,16 +15,24 @@ const createPost = async (req, res) => {
 
 const getPosts = async (req, res) => {
   try {
-    const response = await axios.get(`${POST_SERVICE_URL}/`);
+    const response = await axios.get(`${POST_SERVICE_URL}/posts`);
     res.status(response.status).json(response.data);
   } catch (error) {
     res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
   }
 };
+const getPostById = async (req, res) => {
+  try {
+    const response = await axios.get(`${POST_SERVICE_URL}/posts/${req.params.id}`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+}
 
 const deletePost = async (req, res) => {
   try {
-    const response = await axios.delete(`${POST_SERVICE_URL}/${req.params.id}`, {
+    const response = await axios.delete(`${POST_SERVICE_URL}/posts/${req.params.id}`, {
       headers: { Authorization: req.headers.authorization },
     });
     res.status(response.status).json(response.data);
@@ -33,4 +41,4 @@ const deletePost = async (req, res) => {
   }
 };
 
-module.exports = { createPost, getPosts, deletePost };
+module.exports = { createPost, getPosts, deletePost, getPostById };

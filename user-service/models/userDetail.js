@@ -12,8 +12,15 @@ const userDetailSchema = new mongoose.Schema({
     gender: { type: String, enum: ['male', 'female', 'other'] },
     phoneNumber: { 
         type: String, 
-        required: true,
+        unique: true, 
+        sparse: true,
         match: [/^(\+84|0)[3|5|7|8|9]\d{8}$/, 'Invalid Vietnamese phone number format']    
+    },
+    email: {
+        type: String,
+        unique: true,
+        sparse: true,
+        match: /.+\@.+\..+/
     },
     address: { type: String },
     bio: { type: String }

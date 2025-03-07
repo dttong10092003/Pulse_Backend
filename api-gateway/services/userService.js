@@ -22,4 +22,16 @@ const updateUser = async (req, res) => {
   }
 };
 
-module.exports = { getUser, updateUser };
+const createUserDetail = async (req, res) => {
+  try {
+    const response = await axios.post(`${USER_SERVICE_URL}/users`, req.body, {
+      headers: { Authorization: req.headers.authorization }, // Thêm token vào headers
+    });
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    console.error("❌ Error in createUserDetail:", error.response?.data || error.message); // Debug lỗi
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+};
+
+module.exports = { getUser, updateUser, createUserDetail };

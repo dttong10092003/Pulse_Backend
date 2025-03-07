@@ -4,11 +4,12 @@ const jwt = require('jsonwebtoken');
 const verifyToken = (req) => {
     const authHeader = req.headers.authorization;
     console.log("🔹 Headers received in post-service:", req.headers); // Debug headers
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    
+    if (!authHeader) {
         throw { status: 401, message: 'Unauthorized: No token provided' };
     }
-
-    const token = authHeader.split(' ')[1];
+    
+    const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
     console.log("🔹 Extracted token in post-service:", token); // Debug token
 
     try {
@@ -68,7 +69,6 @@ const getAllPosts = async (req, res) => {
     }
 };
 
-
 // Lấy bài viết theo ID (Không yêu cầu đăng nhập)
 const getPostById = async (req, res) => {
     try {
@@ -81,8 +81,5 @@ const getPostById = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
-
-
-
 
 module.exports = { createPost, getAllPosts, getPostById, deletePost };
