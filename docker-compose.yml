@@ -44,6 +44,25 @@ services:
       - JWT_SECRET=mySuperSecretKey12345!@#123
     depends_on:
       - mongo 
+  like-service: 
+    build: ./like-service
+    ports:
+      - "5003:5003"
+    environment:
+      - MONGODB_URI=mongodb+srv://pulse:pulse@pulse.01h26.mongodb.net/?retryWrites=true&w=majority&appName=Pulse
+      - JWT_SECRET=mySuperSecretKey12345!@#123
+    depends_on:
+      - mongo
+    
+  cmt-service: 
+    build: ./cmt-service
+    ports:
+      - "5004:5004"
+    environment:
+      - MONGODB_URI=mongodb+srv://pulse:pulse@pulse.01h26.mongodb.net/?retryWrites=true&w=majority&appName=Pulse
+      - JWT_SECRET=mySuperSecretKey12345!@#123
+    depends_on:
+      - mongo
 
   mongo:
     image: mongo
