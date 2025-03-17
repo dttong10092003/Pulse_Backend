@@ -12,6 +12,7 @@ services:
       - USER_SERVICE_URL=http://user-service:5002
       - LIKE_SERVICE_URL=http://like-service:5003
       - CMT_SERVICE_URL=http://cmt-service:5004
+      - CHAT_SERVICE_URL=http://chat-service:5005
 
   auth-service:
     build:
@@ -67,6 +68,21 @@ services:
     depends_on:
       - mongo
       - auth-service
+
+  chat-service:
+    build: ./chat-service
+    ports:
+      - "5005:5005"
+    environment:
+      - MONGODB_URI=mongodb+srv://chat123:chat123@cluster0.ezmiy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - mongo
+      - redis
+  redis: 
+    image: redis
+    ports:
+      - "6379:6379"
 
   mongo:
     image: mongo
