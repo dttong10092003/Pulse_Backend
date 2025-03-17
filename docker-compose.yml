@@ -10,6 +10,8 @@ services:
       - AUTH_SERVICE_URL=http://auth-service:5000
       - POST_SERVICE_URL=http://post-service:5001
       - USER_SERVICE_URL=http://user-service:5002
+      - LIKE_SERVICE_URL=http://like-service:5003
+      - CMT_SERVICE_URL=http://cmt-service:5004
 
   auth-service:
     build:
@@ -53,6 +55,7 @@ services:
       - JWT_SECRET=mySuperSecretKey12345!@#123
     depends_on:
       - mongo
+      - auth-service
     
   cmt-service: 
     build: ./cmt-service
@@ -63,6 +66,7 @@ services:
       - JWT_SECRET=mySuperSecretKey12345!@#123
     depends_on:
       - mongo
+      - auth-service
 
   mongo:
     image: mongo
