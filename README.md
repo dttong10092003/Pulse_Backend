@@ -2,6 +2,8 @@
 docker compose down
 docker compose up --build
 
+-> cd api-gateway: npm install cors
+
 like-service:
 
 Tạo like cho 1 post (POST):
