@@ -1,11 +1,10 @@
 const mongoose = require('mongoose');
 
 const ConversationSchema = new mongoose.Schema({
-  conversationId: { type: String, unique: true, required: true },
-  members: { type: [String], required: true },
+  members: { type: [mongoose.Schema.Types.ObjectId], required: true },
   isGroup: { type: Boolean, default: false },
   groupName: { type: String, default: '' },
-  adminId: { type: String, default: '' } 
+  adminId: { type: mongoose.Schema.Types.ObjectId, default: null },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Conversation', ConversationSchema);

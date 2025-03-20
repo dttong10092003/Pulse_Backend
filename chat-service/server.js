@@ -7,6 +7,7 @@ require('dotenv').config();
 const messageRoutes = require('./routes/messageRoute');
 const conversationRoutes = require('./routes/conversationRoute');
 const redisClient = require('./config/redisClient');
+const Message = require('./models/message');
 
 const app = express();
 const server = http.createServer(app);

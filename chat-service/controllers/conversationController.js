@@ -16,15 +16,22 @@ exports.checkUserOnline = async (req, res) => {
 
 exports.createOrGetPrivateConversation = async (req, res) => {
   try {
-    const { user1, user2, user1Name, user2Name } = req.body;
-    const conversationId = [user1, user2].sort().join('_');
+    const { user1, user2, user2Name } = req.body;
+    const conversationId = new mongoose.Types.ObjectId();
 
-    let conversation = await Conversation.findOne({ conversationId });
+    let conversation = await Conversation.findOne({ 
+      members: { $all: [user1, user2] },
+      isGroup: false 
+    });
 
     if (!conversation) {
       // ✅ Đặt groupName = Tên người còn lại
-      const groupName = user1 === conversationId.split('_')[0] ? user2Name : user1Name;
-      conversation = new Conversation({ conversationId, members: [user1, user2], isGroup: false, groupName });
+      conversation = new Conversation({
+        conversationId, 
+        members: [user1, user2], 
+        isGroup: false, 
+        groupName: user2Name
+      });
       await conversation.save();
     }
 
@@ -58,7 +65,9 @@ exports.createGroupConversation = async (req, res) => {
 exports.addMemberToGroup = async (req, res) => {
   try {
     const { conversationId, newMember } = req.body;
-    const conversation = await Conversation.findOne({ conversationId });
+    console.log(conversationId, newMember);
+    const conversation = await Conversation.findOne({ _id: conversationId });
+
 
     if (!conversation || !conversation.isGroup) {
       return res.status(400).json({ message: "Không tìm thấy nhóm chat" });
@@ -79,17 +88,19 @@ exports.addMemberToGroup = async (req, res) => {
 exports.removeMemberFromGroup = async (req, res) => {
   try {
     const { conversationId, adminId, memberId } = req.body;
-    const conversation = await Conversation.findOne({ conversationId });
+    console.log(conversationId, adminId, memberId);
+    const conversation = await Conversation.findOne({ _id: conversationId });
+
 
     if (!conversation || !conversation.isGroup) {
       return res.status(400).json({ message: "Không tìm thấy nhóm chat" });
     }
 
-    if (conversation.adminId !== adminId) {
+    if (conversation.adminId.toString() !== adminId.toString()) {
       return res.status(403).json({ message: "Bạn không có quyền xóa thành viên" });
     }
 
-    conversation.members = conversation.members.filter(member => member !== memberId);
+    conversation.members = conversation.members.filter(member => member.toString() !== memberId.toString());
     await conversation.save();
 
     res.status(200).json({ message: "Xóa thành viên thành công", conversation });
@@ -103,24 +114,34 @@ exports.getRecentConversations = async (req, res) => {
   try {
     const { userId } = req.params;
 
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
     // Lấy danh sách chat từ Redis (tối đa 10 cuộc trò chuyện gần nhất)
     const recentConversations = await redisClient.zRange(`recentChats:${userId}`, 0, 9, { REV: true });
 
+    console.log(`Recent Conversations from Redis: ${recentConversations}`);
     // Nếu có dữ liệu từ Redis, trả về ngay lập tức
     if (recentConversations.length > 0) {
       return res.json(recentConversations);
     }
 
     // Nếu không có trong Redis, lấy từ MongoDB
-    const conversations = await Conversation.find({ members: userId }).sort({ updatedAt: -1 }).limit(10);
+    const conversations = await Conversation.find({
+      members: { $in: [userObjectId] } // Sử dụng $in để so sánh với mảng các ObjectId
+    }).sort({ updatedAt: -1 }).limit(10);
     
+    console.log(`Conversations from MongoDB: ${JSON.stringify(conversations)}`);
+
     // Cập nhật Redis
     for (const conv of conversations) {
-      await redisClient.zAdd(`recentChats:${userId}`, { score: Date.now(), value: conv.conversationId });
+      await redisClient.zAdd(`recentChats:${userId}`, { score: Date.now(), value: conv._id.toString() });
     }
+
+    console.log(`Recent Chats updated in Redis`);
 
     res.json(conversations);
   } catch (error) {
+    console.error(`Error in getRecentConversations: ${error.message}`);
     res.status(500).json({ error: error.message });
   }
 };
@@ -128,13 +149,13 @@ exports.getRecentConversations = async (req, res) => {
 exports.changeGroupAdmin = async (req, res) => {
   try {
     const { conversationId, adminId, newAdminId } = req.body;
-    const conversation = await Conversation.findOne({ conversationId });
+    const conversation = await Conversation.findOne({ _id: conversationId });
 
     if (!conversation || !conversation.isGroup) {
       return res.status(400).json({ message: "Không tìm thấy nhóm chat" });
     }
 
-    if (conversation.adminId !== adminId) {
+    if (!conversation.adminId || !adminId || conversation.adminId.toString() !== adminId.toString()) {
       return res.status(403).json({ message: "Bạn không có quyền chuyển trưởng nhóm" });
     }
 
@@ -171,7 +192,7 @@ exports.searchConversations = async (req, res) => {
     let formattedPrivateChats = [];
 
     for (const conv of privateChats) {
-      const otherUserId = conv.members.find(member => member !== userId);
+      const otherUserId = conv.members.find(member => member.toString() !== userId.toString());
 
       // 💡 Tìm theo tên hiển thị (groupName) của người còn lại
       if (conv.groupName.toLowerCase().includes(keyword.toLowerCase())) {

@@ -7,7 +7,7 @@ exports.getRecentImages = async (req, res) => {
     const { conversationId } = req.params;
 
     const images = await Message.find({
-      conversationId,
+      conversationId: conversationId,
       type: 'image'
     }).sort({ timestamp: -1 }).limit(5);
 
@@ -23,7 +23,7 @@ exports.getRecentFiles = async (req, res) => {
     const { conversationId } = req.params;
 
     const files = await Message.find({
-      conversationId,
+      conversationId: conversationId,
       type: 'file'
     }).sort({ timestamp: -1 }).limit(5);
 

@@ -68,6 +68,7 @@ const getRecentConversations = async (req, res) => {
     const response = await axios.get(`${CHAT_SERVICE_URL}/conversations/recent/${req.params.userId}`);
     res.status(response.status).json(response.data);
   } catch (error) {
+    console.log("Hello:::::",error);
     res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
   }
 };
