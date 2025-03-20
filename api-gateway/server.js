@@ -13,6 +13,8 @@ const postRoutes = require("./routes/postRoutes");
 const userRoutes = require("./routes/userRoutes");
 const likeRoutes = require("./routes/likeRoutes");
 const commentRoutes = require("./routes/commentRoutes");
+const chatRoutes = require('./routes/chatRoutes');
+
 
 
 // Sử dụng routes
@@ -21,6 +23,7 @@ app.use("/posts", postRoutes);
 app.use("/users", userRoutes);
 app.use("/likes", likeRoutes);
 app.use("/comments", commentRoutes);
+app.use('/chat', chatRoutes);
 
 
 // API kiểm tra hoạt động của Gateway
