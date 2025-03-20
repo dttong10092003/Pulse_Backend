@@ -37,7 +37,7 @@ const getUserById = async (req, res) => {
 // Cập nhật thông tin user (phải đăng nhập)
 const updateUser = async (req, res) => {
     try {
-        const { firstname, lastname, DOB, gender, phoneNumber, email, address, bio } = req.body;
+        const { firstname, lastname, DOB, gender, phoneNumber, email, address, bio, avatar, backgroundAvatar } = req.body;
         const userId = req.params.id;
 
         let user = await UserDetail.findOne({ userId });
@@ -60,6 +60,8 @@ const updateUser = async (req, res) => {
         
         user.address = address || user.address;
         user.bio = bio || user.bio;
+        user.avatar = avatar || user.avatar;
+        user.backgroundAvatar = backgroundAvatar || user.backgroundAvatar;
 
         await user.save();
         res.json({ message: 'User updated successfully', user });
@@ -73,14 +75,14 @@ const createUserDetail = async (req, res) => {
     try {
         const userId = verifyToken(req); // Lấy userId từ token
         console.log("✅ User ID from token:", userId);
-        const { firstname, lastname, DOB, gender, phoneNumber, email, address, bio } = req.body;
+        const { firstname, lastname, DOB, gender, phoneNumber, email, address, bio, avatar, backgroundAvatar } = req.body;
 
         const existingUser = await UserDetail.findOne({ userId });
         if (existingUser) {
             return res.status(400).json({ message: 'User detail already exists' });
         }
 
-        let userDetailData = { userId, firstname, lastname, DOB, gender, address, bio };
+        let userDetailData = { userId, firstname, lastname, DOB, gender, address, bio, avatar, backgroundAvatar };
         
         if (phoneNumber) {
             userDetailData.phoneNumber = phoneNumber;

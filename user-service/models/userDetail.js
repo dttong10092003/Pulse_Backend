@@ -23,7 +23,15 @@ const userDetailSchema = new mongoose.Schema({
         match: /.+\@.+\..+/
     },
     address: { type: String },
-    bio: { type: String }
+    bio: { type: String },
+    avatar: {  
+        type: String,
+        default: '',  
+    },
+    backgroundAvatar: { 
+        type: String,
+        default: '',
+    }
 });
 
 const UserDetail = mongoose.model('usersDetail', userDetailSchema);
