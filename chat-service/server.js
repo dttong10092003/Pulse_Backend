@@ -23,8 +23,8 @@ mongoose.connect(process.env.MONGODB_URI, {
 }).then(() => console.log('✅ MongoDB connected'))
   .catch(err => console.error(err));
 
-app.use('/api/messages', messageRoutes);
-app.use('/api/conversations', conversationRoutes);
+app.use('/messages', messageRoutes);
+app.use('/conversations', conversationRoutes);
 
 // Socket.io xử lý real-time
 io.on('connection', (socket) => {
@@ -40,8 +40,8 @@ io.on('connection', (socket) => {
     console.log(`📌 User joined room: ${conversationId}`);
   });
 
-  socket.on('sendMessage', async ({ conversationId, senderId, text }) => {
-    const newMessage = new Message({ conversationId, senderId, text });
+  socket.on('sendMessage', async ({ conversationId, senderId, type, content }) => {
+    const newMessage = new Message({ conversationId, senderId, type, content });
     await newMessage.save();
     await redisClient.del(`messages:${conversationId}`);
 
