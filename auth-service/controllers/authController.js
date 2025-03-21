@@ -42,30 +42,52 @@ const registerUserWithPhone = async (req, res) => {
 };
 
 // Đăng ký / Đăng nhập bằng Google OAuth2
+// const handleGoogleLogin = async (req, res) => {
+//     try {
+//         const { email, googleId } = req.body;
+
+//         let user = await User.findOne({ email });
+
+//         if (user) {
+//             // Nếu user đã có tài khoản, đăng nhập luôn
+//             const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+//             return res.status(200).json({ token, user });
+//         }
+
+//         // Nếu user chưa có tài khoản, tạo mới
+//         user = new User({ email, googleId, isVerified: false });
+//         await user.save();
+
+//         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+//         res.status(201).json({ token, user, message: "Please enter phone number to verify" });
+//     } catch (err) {
+//         res.status(500).json({ message: err.message });
+//     }
+// };
 const handleGoogleLogin = async (req, res) => {
-    try {
-        const { email, googleId } = req.body;
+  try {
+    const { email, googleId } = req.body;
 
-        let user = await User.findOne({ email });
+    let user = await User.findOne({ email });
 
-        if (user) {
-            // Nếu user đã có tài khoản, đăng nhập luôn
-            const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-            return res.status(200).json({ token, user });
-        }
-
-        // Nếu user chưa có tài khoản, tạo mới
-        user = new User({ email, googleId, isVerified: false });
-        await user.save();
-
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-        res.status(201).json({ token, user, message: "Please enter phone number to verify" });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
+    if (user) {
+      // Nếu user đã có tài khoản, kiểm tra `isVerified`
+      const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      return res.status(200).json({ token, user, isVerified: user.isVerified });
     }
-};
 
+    // Nếu user chưa có tài khoản, tạo mới
+    user = new User({ email, googleId, isVerified: false });
+    await user.save();
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    res.status(201).json({ token, user, isVerified: false });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 // Đăng nhập bằng username/password
 const loginUser = async (req, res) => {
     try {
