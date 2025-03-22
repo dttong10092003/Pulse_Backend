@@ -25,8 +25,7 @@ const userRoutes = require("./routes/userRoutes");
 const likeRoutes = require("./routes/likeRoutes");
 const commentRoutes = require("./routes/commentRoutes");
 const chatRoutes = require('./routes/chatRoutes');
-
-
+const followRoutes = require('./routes/followRoutes');
 
 // Sử dụng routes
 app.use("/auth", authRoutes);
@@ -35,6 +34,7 @@ app.use("/users", userRoutes);
 app.use("/likes", likeRoutes);
 app.use("/comments", commentRoutes);
 app.use('/chat', chatRoutes);
+app.use('/follow', followRoutes);
 
 
 // API kiểm tra hoạt động của Gateway
