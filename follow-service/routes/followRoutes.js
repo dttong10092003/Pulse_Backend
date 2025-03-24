@@ -8,7 +8,7 @@ const {
   getFollowings
 } = require('../controllers/followController');
 
-router.post('/follow', followUser);
+router.post('/', followUser);
 
 router.post('/unfollow', unfollowUser);
 

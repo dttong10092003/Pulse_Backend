@@ -1,4 +1,4 @@
-const Follow = require('../models/Follow');
+const Follow = require('../models/follow');
 
 // Follow người dùng khác
 exports.followUser = async (req, res) => {

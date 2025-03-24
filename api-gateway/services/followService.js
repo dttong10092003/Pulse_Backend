@@ -8,7 +8,7 @@ const followUser = async (req, res) => {
       `${FOLLOW_SERVICE_URL}/follow`,
       { followingId: req.body.followingId },
       {
-        headers: { "x-user-id": req.user.id }  // hoặc req.headers["x-user-id"] nếu không decode JWT
+        headers: { "x-user-id": req.headers["x-user-id"] }  // hoặc req.headers["x-user-id"] nếu không decode JWT
       }
     );
     res.status(response.status).json(response.data);
@@ -22,10 +22,10 @@ const followUser = async (req, res) => {
 const unfollowUser = async (req, res) => {
   try {
     const response = await axios.post(
-      `${FOLLOW_SERVICE_URL}/unfollow`,
+      `${FOLLOW_SERVICE_URL}/follow/unfollow`,
       { followingId: req.body.followingId },
       {
-        headers: { "x-user-id": req.user.id }
+        headers: { "x-user-id": req.headers["x-user-id"] }
       }
     );
     res.status(response.status).json(response.data);
@@ -38,7 +38,7 @@ const unfollowUser = async (req, res) => {
 
 const getFollowers = async (req, res) => {
   try {
-    const response = await axios.get(`${FOLLOW_SERVICE_URL}/followers/${req.params.userId}`);
+    const response = await axios.get(`${FOLLOW_SERVICE_URL}/follow/followers/${req.params.userId}`);
     res.status(response.status).json(response.data);
   } catch (error) {
     res.status(error.response?.status || 500).json({
@@ -49,7 +49,7 @@ const getFollowers = async (req, res) => {
 
 const getFollowings = async (req, res) => {
   try {
-    const response = await axios.get(`${FOLLOW_SERVICE_URL}/followings/${req.params.userId}`);
+    const response = await axios.get(`${FOLLOW_SERVICE_URL}/follow/followings/${req.params.userId}`);
     res.status(response.status).json(response.data);
   } catch (error) {
     res.status(error.response?.status || 500).json({

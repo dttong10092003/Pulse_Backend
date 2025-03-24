@@ -4,7 +4,7 @@ const followService = require("../services/followService");
 const { authenticateToken } = require("../middleware/authMiddleware");
 
 // Follow / Unfollow
-router.post("/follow", authenticateToken, followService.followUser);
+router.post("/", authenticateToken, followService.followUser);
 router.post("/unfollow", authenticateToken, followService.unfollowUser);
 
 // Get followers / followings
