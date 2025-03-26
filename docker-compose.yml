@@ -13,7 +13,7 @@ services:
       - LIKE_SERVICE_URL=http://like-service:5003
       - CMT_SERVICE_URL=http://cmt-service:5004
       - CHAT_SERVICE_URL=http://chat-service:5005
-
+      - FOLLOW_SERVICE_URL=http://follow-service:5006
   auth-service:
     build:
       context: ./auth-service # Chỉ ra nơi có Dockerfile của auth-service
@@ -79,6 +79,18 @@ services:
     depends_on:
       - mongo
       - redis
+  follow-service:
+    build:
+      context: ./follow-service
+    ports:
+      - "5006:5006"  
+    environment:
+      - MONGODB_URI=mongodb+srv://follow:follow@follow.r3ypo.mongodb.net/?retryWrites=true&w=majority&appName=follow
+      - JWT_SECRET=mySuperSecretKey12345!@#123
+    depends_on:
+      - mongo
+      - auth-service
+
   redis: 
     image: redis
     ports:
