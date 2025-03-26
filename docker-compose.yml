@@ -1,0 +1,102 @@
+services:
+  api-gateway:
+    build:
+      context: ./api-gateway # Chỉ ra nơi có Dockerfile của api-gateway
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:5000
+      - POST_SERVICE_URL=http://post-service:5001
+      - USER_SERVICE_URL=http://user-service:5002
+      - LIKE_SERVICE_URL=http://like-service:5003
+      - CMT_SERVICE_URL=http://cmt-service:5004
+      - CHAT_SERVICE_URL=http://chat-service:5005
+      - FOLLOW_SERVICE_URL=http://follow-service:5006
+  auth-service:
+    build:
+      context: ./auth-service # Chỉ ra nơi có Dockerfile của auth-service
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGODB_URI=mongodb+srv://auth123:auth123@cluster0.gmid9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - JWT_SECRET=mySuperSecretKey12345!@#123
+    depends_on:
+      - mongo
+
+  post-service: 
+    build:
+      context: ./post-service # Chỉ ra nơi có Dockerfile của post-service
+    ports:
+      - "5001:5001"
+    environment:
+      - MONGODB_URI=mongodb+srv://pulse:pulse@pulse.01h26.mongodb.net/?retryWrites=true&w=majority&appName=Pulse
+      - AUTH_SERVICE_URL=http://auth-service:5000
+      - JWT_SECRET=mySuperSecretKey12345!@#123
+    depends_on:
+      - mongo 
+
+  user-service:
+    build:
+      context: ./user-service
+    ports:
+      - "5002:5002"
+    environment:
+      - MONGODB_URI=mongodb+srv://auth123:auth123@cluster0.gmid9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - JWT_SECRET=mySuperSecretKey12345!@#123
+    depends_on:
+      - mongo 
+  like-service: 
+    build: ./like-service
+    ports:
+      - "5003:5003"
+    environment:
+      - MONGODB_URI=mongodb+srv://pulse:pulse@pulse.01h26.mongodb.net/?retryWrites=true&w=majority&appName=Pulse
+      - JWT_SECRET=mySuperSecretKey12345!@#123
+    depends_on:
+      - mongo
+      - auth-service
+    
+  cmt-service: 
+    build: ./cmt-service
+    ports:
+      - "5004:5004"
+    environment:
+      - MONGODB_URI=mongodb+srv://pulse:pulse@pulse.01h26.mongodb.net/?retryWrites=true&w=majority&appName=Pulse
+      - JWT_SECRET=mySuperSecretKey12345!@#123
+    depends_on:
+      - mongo
+      - auth-service
+
+  chat-service:
+    build: ./chat-service
+    ports:
+      - "5005:5005"
+    environment:
+      - MONGODB_URI=mongodb+srv://chat123:chat123@cluster0.ezmiy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - mongo
+      - redis
+  follow-service:
+    build:
+      context: ./follow-service
+    ports:
+      - "5006:5006"  
+    environment:
+      - MONGODB_URI=mongodb+srv://follow:follow@follow.r3ypo.mongodb.net/?retryWrites=true&w=majority&appName=follow
+      - JWT_SECRET=mySuperSecretKey12345!@#123
+    depends_on:
+      - mongo
+      - auth-service
+
+  redis: 
+    image: redis
+    ports:
+      - "6379:6379"
+
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
