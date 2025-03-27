@@ -100,5 +100,57 @@ const updateUser = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+const checkEmailOrPhoneExists = async (req, res) => {
+    try {
+        const { email, phoneNumber } = req.body;
 
-module.exports = { getUserById, updateUser, createUserDetail };
+        if (!email && !phoneNumber) {
+            return res.status(400).json({ error: 'Missing email or phoneNumber' });
+        }
+
+        const conditions = [];
+        if (email) conditions.push({ email: email.trim() });
+        if (phoneNumber) conditions.push({ phoneNumber: phoneNumber.trim() });
+
+        // Kiểm tra trong model UserDetail của user-service
+        const existingUserDetail = await UserDetail.findOne({ $or: conditions });
+
+        if (existingUserDetail) {
+            return res.status(200).json({ exists: true });
+        }
+
+        return res.status(200).json({ exists: false });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};
+
+const getUserByEmail = async (req, res) => {
+    try {
+      const { email } = req.params;  // Lấy email từ params
+  
+      // Tìm người dùng trong UserDetail dựa trên email
+      const userDetail = await UserDetail.findOne({ email: email.trim() });
+  
+      if (!userDetail) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      // Trả về thông tin người dùng, bao gồm cả userId
+      res.json({
+        userId: userDetail.userId,  // Trả về userId cho auth-service để cập nhật mật khẩu
+        email: userDetail.email,
+        phoneNumber: userDetail.phoneNumber,
+        firstname: userDetail.firstname,
+        lastname: userDetail.lastname,
+        // Các thông tin khác nếu cần
+      });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  };
+  
+
+
+
+module.exports = { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail };

@@ -4,7 +4,9 @@ const {
     registerUserWithPhone,
     handleGoogleLogin,
     loginUser,
-    authenticateToken
+    authenticateToken,
+    checkEmailOrPhoneExists,
+    sendResetPasswordToEmail,
 } = require('../controllers/authController');
 
 const router = express.Router();
@@ -25,5 +27,12 @@ router.post('/login', loginUser);
 router.get('/verify-token', authenticateToken, (req, res) => {
     res.json({ message: 'Token is valid', user: req.user });
 });
+
+// Kiểm tra email hoặc số điện thoại đã tồn tại
+router.post('/check-email-phone', checkEmailOrPhoneExists);
+
+// Send reset password link to email
+router.post('/send-reset-email', sendResetPasswordToEmail);
+
 
 module.exports = router;

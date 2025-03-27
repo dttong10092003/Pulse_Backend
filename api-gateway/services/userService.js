@@ -34,4 +34,21 @@ const createUserDetail = async (req, res) => {
   }
 };
 
-module.exports = { getUser, updateUser, createUserDetail };
+const checkEmailOrPhoneExists = async (req, res) => {
+  try {
+    const response = await axios.post(`${USER_SERVICE_URL}/users/check-email-phone`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.message });
+  }
+};
+const getUserByEmail = async (req, res) => {
+  try {
+    const response = await axios.get(`${USER_SERVICE_URL}/users/user-details/${req.params.email}`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.message });
+  }
+}
+
+module.exports = { getUser, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail };
