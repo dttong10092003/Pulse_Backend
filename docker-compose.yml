@@ -22,8 +22,11 @@ services:
     environment:
       - MONGODB_URI=mongodb+srv://auth123:auth123@cluster0.gmid9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - JWT_SECRET=mySuperSecretKey12345!@#123
+      - USER_SERVICE_URL=http://user-service:5002
+
     depends_on:
       - mongo
+      - user-service
 
   post-service: 
     build:

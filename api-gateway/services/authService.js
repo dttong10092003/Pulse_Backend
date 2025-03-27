@@ -38,4 +38,24 @@ const loginWithUsername = async (req, res) => {
   }
 };
 
-module.exports = { checkUser, registerWithPhone, loginWithGoogle, loginWithUsername };
+
+const checkEmailOrPhone = async (req, res) => {
+  try {
+    const response = await axios.post(`${AUTH_SERVICE_URL}/auth/check-email-phone`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+}
+
+const sendResetPasswordToEmail = async (req, res) => {
+  try {
+    const response = await axios.post(`${AUTH_SERVICE_URL}/auth/send-reset-email`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+}
+
+
+module.exports = { checkUser, registerWithPhone, loginWithGoogle, loginWithUsername, checkEmailOrPhone, sendResetPasswordToEmail };
