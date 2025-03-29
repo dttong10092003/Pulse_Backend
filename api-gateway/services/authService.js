@@ -57,5 +57,22 @@ const sendResetPasswordToEmail = async (req, res) => {
   }
 }
 
+const resetPasswordWithToken = async (req, res) => {
+  try {
+    const response = await axios.post(`${AUTH_SERVICE_URL}/auth/reset-password`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+}
 
-module.exports = { checkUser, registerWithPhone, loginWithGoogle, loginWithUsername, checkEmailOrPhone, sendResetPasswordToEmail };
+const resetPasswordWithPhone = async (req, res) => {
+  try {
+    const response = await axios.post(`${AUTH_SERVICE_URL}/auth/reset-password-phone`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+}
+
+module.exports = { checkUser, registerWithPhone, loginWithGoogle, loginWithUsername, checkEmailOrPhone, sendResetPasswordToEmail, resetPasswordWithToken, resetPasswordWithPhone };

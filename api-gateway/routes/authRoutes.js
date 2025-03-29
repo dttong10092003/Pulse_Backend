@@ -8,5 +8,7 @@ router.post("/login/google", authService.loginWithGoogle);
 router.post("/login", authService.loginWithUsername);
 router.post("/check-email-phone", authService.checkEmailOrPhone);
 router.post("/send-reset-email", authService.sendResetPasswordToEmail);
+router.post("/reset-password", authService.resetPasswordWithToken);
+router.post("/reset-password-phone", authService.resetPasswordWithPhone);
 
 module.exports = router;

@@ -7,6 +7,8 @@ const {
     authenticateToken,
     checkEmailOrPhoneExists,
     sendResetPasswordToEmail,
+    resetPasswordWithToken,
+    resetPasswordWithPhone,
 } = require('../controllers/authController');
 
 const router = express.Router();
@@ -33,6 +35,11 @@ router.post('/check-email-phone', checkEmailOrPhoneExists);
 
 // Send reset password link to email
 router.post('/send-reset-email', sendResetPasswordToEmail);
+
+// Kiểm tra token reset password
+router.post('/reset-password', resetPasswordWithToken); 
+
+router.post('/reset-password-phone', resetPasswordWithPhone); // Phone number
 
 
 module.exports = router;
