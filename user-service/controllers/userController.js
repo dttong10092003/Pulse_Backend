@@ -150,7 +150,30 @@ const getUserByEmail = async (req, res) => {
     }
   };
   
+  // Tìm danh sách UserDetail từ danh sách userId
+const getUserDetailsByIds = async (req, res) => {
+    try {
+        const { userIds } = req.body; // Lấy danh sách userIds từ body
+
+        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({ message: 'Invalid userIds array' });
+        }
+
+        // Tìm tất cả user details có userId nằm trong danh sách userIds
+        const users = await UserDetail.find({ userId: { $in: userIds } });
+
+        if (users.length === 0) {
+            return res.status(404).json({ message: 'No users found' });
+        }
+
+        // Trả về danh sách user details
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
 
 
 
-module.exports = { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail };
+
+module.exports = { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds };
