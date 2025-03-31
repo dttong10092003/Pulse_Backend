@@ -11,7 +11,7 @@ const checkUserExists = async (req, res) => {
     const existingUser = await User.findOne({ $or: [{ phoneNumber }, { username }] });
 
     if (existingUser) {
-      return res.status(400).json({ message: 'Phone number or Email already in use' });
+      return res.status(400).json({ message: 'Phone number or Username already in use' });
     }
     return res.status(200).json({ message: 'Available for registration' });
   } catch (err) {
