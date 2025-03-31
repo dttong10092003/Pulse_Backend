@@ -51,4 +51,26 @@ const getUserByEmail = async (req, res) => {
   }
 }
 
-module.exports = { getUser, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail };
+const getUserDetailsByIds = async (req, res) => {
+  try {
+    const { userIds } = req.body; // Lấy danh sách userIds từ body
+
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ message: 'Invalid userIds array' });
+    }
+
+    // Tìm tất cả user details có userId nằm trong danh sách userIds
+    const users = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, { userIds });
+
+    if (users.data.length === 0) {
+      return res.status(404).json({ message: 'No users found' });
+    }
+
+    // Trả về danh sách user details
+    res.json(users.data);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { getUser, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds };
