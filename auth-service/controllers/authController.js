@@ -294,6 +294,44 @@ const resetPasswordWithPhone = async (req, res) => {
     res.status(500).json({ message: 'Server error while resetting password via phone' });
   }
 };
+// Lấy username theo userId
+const getUsernameById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('username');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    res.json({ username: user.username });
+  } catch (err) {
+    console.error("Get username error:", err.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+const getMe = async (req, res) => {
+  const authHeader = req.header("Authorization");
+  if (!authHeader) return res.status(401).json({ message: "Missing token" });
+
+  const token = authHeader.startsWith('Bearer ')
+  ? authHeader.replace('Bearer ', '')
+  : authHeader;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Gọi user-service để lấy thông tin chi tiết
+    const userServiceUrl = process.env.USER_SERVICE_URL || "http://user-service:5002";
+    const detailRes = await axios.get(`${userServiceUrl}/users/${user._id}`);
+
+    const userDetail = detailRes.data;
+    userDetail.username = user.username;
+
+
+    res.status(200).json({ user, userDetail });
+  } catch (err) {
+    console.error("getMe error:", err.message);
+    res.status(401).json({ message: "Invalid token" });
+  }
+};
 
 
 module.exports = {
@@ -306,4 +344,6 @@ module.exports = {
   sendResetPasswordToEmail,
   resetPasswordWithToken,
   resetPasswordWithPhone,
+  getMe,
+  getUsernameById,
 };

@@ -75,4 +75,21 @@ const resetPasswordWithPhone = async (req, res) => {
   }
 }
 
-module.exports = { checkUser, registerWithPhone, loginWithGoogle, loginWithUsername, checkEmailOrPhone, sendResetPasswordToEmail, resetPasswordWithToken, resetPasswordWithPhone };
+const getMe = async (req, res) => {
+  try {
+    const response = await axios.get(`${AUTH_SERVICE_URL}/auth/me`, { headers: { Authorization: req.headers.authorization } });
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+}
+const getUsernameById = async (req, res) => {
+  try {
+    const response = await axios.get(`${AUTH_SERVICE_URL}/auth/username/${req.params.id}`, { headers: { Authorization: req.headers.authorization } });
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+}
+
+module.exports = { checkUser, registerWithPhone, loginWithGoogle, loginWithUsername, checkEmailOrPhone, sendResetPasswordToEmail, resetPasswordWithToken, resetPasswordWithPhone, getMe, getUsernameById };
