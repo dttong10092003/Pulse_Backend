@@ -21,18 +21,50 @@ const verifyToken = (req) => {
         throw { status: 403, message: 'Forbidden: Invalid token' };
     }
 };
-// Lấy thông tin user theo ID
+// // Lấy thông tin user theo ID
+// const getUserById = async (req, res) => {
+//     try {
+//         const user = await UserDetail.findOne({ userId: req.params.id });
+//         if (!user) {
+//             return res.status(404).json({ message: 'User not found' });
+//         }
+//         res.json(user);
+//     } catch (err) {
+//         res.status(500).json({ message: err.message });
+//     }
+// };
 const getUserById = async (req, res) => {
     try {
-        const user = await UserDetail.findOne({ userId: req.params.id });
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        res.json(user);
+      const userId = req.params.id;
+  
+      // 1. Tìm UserDetail theo userId
+      const userDetail = await UserDetail.findOne({ userId });
+      if (!userDetail) {
+        return res.status(404).json({ message: "User not found in UserDetail" });
+      }
+  
+      // 2. Gọi sang auth-service để lấy username
+      const authServiceUrl = process.env.AUTH_SERVICE_URL || "http://auth-service:5000";
+      let username = "";
+  
+      try {
+        const response = await axios.get(`${authServiceUrl}/auth/username/${userId}`);
+        username = response.data.username || "";
+      } catch (err) {
+        console.error("Failed to fetch username from auth-service:", err.message);
+      }
+  
+      // 3. Gộp kết quả trả về: username + các trường từ UserDetail
+      res.json({
+        ...userDetail.toObject(),
+        username,
+      });
+  
     } catch (err) {
-        res.status(500).json({ message: err.message });
+      console.error("getUserById error:", err.message);
+      res.status(500).json({ message: err.message });
     }
-};
+  };
 const createUserDetail = async (req, res) => {
     try {
         console.log('Data received from frontend:', req.body);
@@ -149,6 +181,8 @@ const getUserByEmail = async (req, res) => {
       res.status(500).json({ message: err.message });
     }
   };
+
+
   
   // Tìm danh sách UserDetail từ danh sách userId
 const getUserDetailsByIds = async (req, res) => {

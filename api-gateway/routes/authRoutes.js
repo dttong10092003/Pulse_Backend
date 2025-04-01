@@ -10,5 +10,6 @@ router.post("/check-email-phone", authService.checkEmailOrPhone);
 router.post("/send-reset-email", authService.sendResetPasswordToEmail);
 router.post("/reset-password", authService.resetPasswordWithToken);
 router.post("/reset-password-phone", authService.resetPasswordWithPhone);
-
+router.get("/me", authService.getMe);
+router.get("/username/:id", authService.getUsernameById);
 module.exports = router;

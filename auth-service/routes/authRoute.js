@@ -9,6 +9,8 @@ const {
     sendResetPasswordToEmail,
     resetPasswordWithToken,
     resetPasswordWithPhone,
+    getMe,
+    getUsernameById
 } = require('../controllers/authController');
 
 const router = express.Router();
@@ -41,5 +43,9 @@ router.post('/reset-password', resetPasswordWithToken);
 
 router.post('/reset-password-phone', resetPasswordWithPhone); // Phone number
 
+router.get("/me", getMe);
+
+// Lấy username từ userId
+router.get('/username/:id', getUsernameById);
 
 module.exports = router;
