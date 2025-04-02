@@ -4,6 +4,7 @@ const { authenticateToken } = require('../middleware/authMiddleware');
 const router = express.Router();
 
 // 📌 Conversations
+router.get('/conversations/all/:userId', authenticateToken, chatService.getAllConversations);
 router.post('/conversations/private', authenticateToken, chatService.createOrGetPrivateConversation);
 router.post('/conversations/group', authenticateToken, chatService.createGroupConversation);
 router.post('/conversations/group/addMember', authenticateToken, chatService.addMemberToGroup);

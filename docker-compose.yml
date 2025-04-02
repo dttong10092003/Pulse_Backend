@@ -79,11 +79,13 @@ services:
     ports:
       - "5005:5005"
     environment:
-      - MONGODB_URI=mongodb+srv://chat123:chat123@cluster0.ezmiy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - MONGODB_URI=mongodb+srv://message:message@cluster0.pj1pmat.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - REDIS_URL=redis://redis:6379
+      - USER_SERVICE_URL=http://user-service:5002
     depends_on:
       - mongo
       - redis
+      - user-service
   follow-service:
     build:
       context: ./follow-service
