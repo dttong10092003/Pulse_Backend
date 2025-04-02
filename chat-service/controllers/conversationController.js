@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const Conversation = require('../models/conversation');
 const redisClient = require('../config/redisClient');
+const axios = require('axios');
+const Message = require('../models/message');
 
 // 📌 Kiểm tra trạng thái online của user
 exports.checkUserOnline = async (req, res) => {
@@ -13,6 +15,132 @@ exports.checkUserOnline = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// 📌 Lấy tất cả cuộc trò chuyện của user
+exports.getAllConversations = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
+    const conversations = await Conversation.find({
+      members: { $in: [userObjectId] },  // Lọc các cuộc trò chuyện mà user tham gia
+    });
+
+    /////
+    if (!conversations.length) {
+      return res.json([]);
+    }
+
+    // 🔹 Tạo danh sách userId cần lấy thông tin
+    const userIds = [...new Set(conversations.flatMap(convo => convo.members.map(id => id.toString())))];
+
+    // 🔹 Gọi API từ User Service để lấy thông tin user
+    const userServiceUrl = process.env.USER_SERVICE_URL || 'http://user-service:5002';
+    const userResponse = await axios.post(`${userServiceUrl}/users/user-details-by-ids`, { userIds });
+
+    // 🔍 Kiểm tra dữ liệu trả về từ User Service
+    console.log('🟢 User Service Response:', JSON.stringify(userResponse.data, null, 2));
+
+    if (!userResponse.data || !Array.isArray(userResponse.data)) {
+      console.error('❌ Lỗi khi gọi API User Service:', userResponse.data);
+      return res.status(500).json({ error: 'Không thể lấy thông tin user' });
+    }
+
+    // 🔹 Chuyển danh sách user thành object để tra cứu nhanh
+    const userMap = userResponse.data.reduce((acc, user) => {
+      acc[user.userId] = { 
+        userId: user.userId,
+        name: `${user.firstname} ${user.lastname}`.trim() || 'Unknown',
+        avatar: user.avatar || '' };
+      return acc;
+    }, {});
+
+    // 🔹 Gán thông tin members và lấy tin nhắn
+    const updatedConversations = await Promise.all(conversations.map(async (conversation) => {
+      conversation = conversation.toObject(); // Chuyển Mongoose document thành object
+
+      // Thay thế members từ ObjectId sang object chứa thông tin user
+      conversation.members = conversation.members.map(userId => userMap[userId.toString()] || { userId, name: 'Unknown', avatar: '' });
+
+      // Lấy tin nhắn gần nhất
+      const messages = await Message.find({ conversationId: conversation._id })
+        .sort({ timestamp: -1 })
+        .limit(10);
+
+      conversation.messages = messages.map(msg => ({
+        senderId: msg.senderId,
+        content: msg.content,
+        type: msg.type,
+        timestamp: msg.timestamp,
+        isSentByUser: msg.senderId.toString() === userId,
+        senderAvatar: userMap[msg.senderId.toString()]?.avatar || '',
+        isDeleted: msg.isDeleted || false,
+        isPinned: msg.isPinned || false
+      }));
+
+      return conversation;
+    }));
+
+    res.json(updatedConversations);
+  } catch (error) {
+    console.error('❌ Lỗi trong getAllConversations:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+    ///////
+    // Gọi API để lấy thông tin thành viên từ user-service
+//     const membersInfoPromises = conversations.map(async (conversation) => {
+//       const memberIds = conversation.members;
+//       console.log(`Member IDs: ${memberIds}`);
+
+      
+//       const userServiceUrl = process.env.USER_SERVICE_URL || 'http://user-service:5002';
+//       // Gọi API từ user-service để lấy thông tin các thành viên trong cuộc trò chuyện
+//       const response = await axios.post(`${userServiceUrl}/users/user-details-by-ids`, {
+//         userIds: memberIds,  // Gửi danh sách userIds vào body
+//       });
+
+//       // Gán thông tin thành viên vào cuộc trò chuyện
+//       console.log(`Response from user-service: ${JSON.stringify(response.data)}`);
+//       conversation.members = response.data; // Lưu danh sách thông tin thành viên
+
+
+
+
+// // Convert to plain JS object
+// const convObj = conversation.toObject();
+// convObj.members = response.data;
+
+// // Lấy 10 tin nhắn gần nhất
+// convObj.messages = await Message.find({ conversationId: conversation._id })
+//   .sort({ timestamp: -1 })
+//   .limit(10);
+
+// return convObj;
+
+
+
+
+
+//       console.log(conversation.members);
+//       console.log(`Updated conversation members: ${JSON.stringify(conversation.members)}`);
+//       conversation.messages = await Message.find({ conversationId: conversation._id })
+//         .sort({ timestamp: -1 })
+//         .limit(10);
+
+//       return conversation;
+//     });
+
+//     const updatedConversations = await Promise.all(membersInfoPromises);
+
+//     res.json(updatedConversations);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
 
 exports.createOrGetPrivateConversation = async (req, res) => {
   try {
