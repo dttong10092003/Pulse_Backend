@@ -22,49 +22,49 @@ const verifyToken = (req) => {
     }
 };
 // // Lấy thông tin user theo ID
-// const getUserById = async (req, res) => {
-//     try {
-//         const user = await UserDetail.findOne({ userId: req.params.id });
-//         if (!user) {
-//             return res.status(404).json({ message: 'User not found' });
-//         }
-//         res.json(user);
-//     } catch (err) {
-//         res.status(500).json({ message: err.message });
-//     }
-// };
 const getUserById = async (req, res) => {
     try {
-      const userId = req.params.id;
-  
-      // 1. Tìm UserDetail theo userId
-      const userDetail = await UserDetail.findOne({ userId });
-      if (!userDetail) {
-        return res.status(404).json({ message: "User not found in UserDetail" });
-      }
-  
-      // 2. Gọi sang auth-service để lấy username
-      const authServiceUrl = process.env.AUTH_SERVICE_URL || "http://auth-service:5000";
-      let username = "";
-  
-      try {
-        const response = await axios.get(`${authServiceUrl}/auth/username/${userId}`);
-        username = response.data.username || "";
-      } catch (err) {
-        console.error("Failed to fetch username from auth-service:", err.message);
-      }
-  
-      // 3. Gộp kết quả trả về: username + các trường từ UserDetail
-      res.json({
-        ...userDetail.toObject(),
-        username,
-      });
-  
+        const user = await UserDetail.findOne({ userId: req.params.id });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json(user);
     } catch (err) {
-      console.error("getUserById error:", err.message);
-      res.status(500).json({ message: err.message });
+        res.status(500).json({ message: err.message });
     }
-  };
+};
+// const getUserById = async (req, res) => {
+//     try {
+//       const userId = req.params.id;
+  
+//       // 1. Tìm UserDetail theo userId
+//       const userDetail = await UserDetail.findOne({ userId });
+//       if (!userDetail) {
+//         return res.status(404).json({ message: "User not found in UserDetail" });
+//       }
+  
+//       // 2. Gọi sang auth-service để lấy username
+//       const authServiceUrl = process.env.AUTH_SERVICE_URL || "http://auth-service:5000";
+//       let username = "";
+  
+//       try {
+//         const response = await axios.get(`${authServiceUrl}/auth/username/${userId}`);
+//         username = response.data.username || "";
+//       } catch (err) {
+//         console.error("Failed to fetch username from auth-service:", err.message);
+//       }
+  
+//       // 3. Gộp kết quả trả về: username + các trường từ UserDetail
+//       res.json({
+//         ...userDetail.toObject(),
+//         username,
+//       });
+  
+//     } catch (err) {
+//       console.error("getUserById error:", err.message);
+//       res.status(500).json({ message: err.message });
+//     }
+//   };
 const createUserDetail = async (req, res) => {
     try {
         console.log('Data received from frontend:', req.body);
@@ -72,13 +72,14 @@ const createUserDetail = async (req, res) => {
         console.log("✅ User ID from token:", userId);
 
         const { firstname, lastname, dob, gender, phoneNumber, email, address, bio, avatar, backgroundAvatar } = req.body;
-
+        const finalAvatar = avatar || 'https://i.postimg.cc/7Y7ypVD2/avatar-mac-dinh.jpg';
+        const finalBackgroundAvatar = backgroundAvatar || 'https://i.postimg.cc/6pXNwv51/backgrond-mac-dinh.jpg';
         const existingUser = await UserDetail.findOne({ userId });
         if (existingUser) {
             return res.status(400).json({ message: 'User detail already exists' });
         }
 
-        let userDetailData = { userId, firstname, lastname, DOB: dob, gender, address, bio, avatar, backgroundAvatar };
+        let userDetailData = { userId, firstname, lastname, DOB: dob, gender, address, bio, avatar: finalAvatar, backgroundAvatar: finalBackgroundAvatar };
         if (phoneNumber) {
             userDetailData.phoneNumber = phoneNumber;
         }
