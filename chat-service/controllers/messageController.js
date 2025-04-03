@@ -38,12 +38,28 @@ exports.pinMessage = async (req, res) => {
   try {
     const { conversationId, messageId } = req.body;
 
+    // Kiểm tra xem tin nhắn có tồn tại trong cơ sở dữ liệu không
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Tin nhắn không tồn tại" });
+    }
+
+    // Kiểm tra tin nhắn có phải là đã ghim hay chưa
+    if (message.isPinned) {
+      return res.status(400).json({ message: "Tin nhắn đã được ghim rồi" });
+    }
+
+  // Kiểm tra số lượng tin nhắn đã ghim
     const pinnedMessages = await redisClient.lRange(`pinned:${conversationId}`, 0, -1);
     if (pinnedMessages.length >= 2) {
       return res.status(400).json({ message: "Chỉ có thể ghim tối đa 2 tin nhắn" });
     }
 
+    // Ghim tin nhắn vào Redis và cập nhật cơ sở dữ liệu
     await redisClient.rPush(`pinned:${conversationId}`, messageId);
+    message.isPinned = true;
+    await message.save();
+
     res.status(200).json({ message: "Tin nhắn đã được ghim" });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -56,7 +72,10 @@ exports.getPinnedMessages = async (req, res) => {
     const { conversationId } = req.params;
 
     const pinnedMessagesIds = await redisClient.lRange(`pinned:${conversationId}`, 0, -1);
-    const pinnedMessages = await Message.find({ _id: { $in: pinnedMessagesIds } });
+    const pinnedMessages = await Message.find({ _id: { $in: pinnedMessagesIds }, isDeleted: false, isPinned: true });
+    if (!pinnedMessages || pinnedMessages.length === 0) {
+      return res.status(404).json({ message: "Không có tin nhắn nào được ghim" });
+    }
 
     res.json(pinnedMessages);
   } catch (error) {
@@ -74,13 +93,17 @@ exports.revokeMessage = async (req, res) => {
       return res.status(404).json({ message: "Tin nhắn không tồn tại" });
     }
 
-    if (message.senderId !== senderId) {
+    if (message.senderId.toString() !== senderId.toString()) {
       return res.status(403).json({ message: "Bạn không có quyền thu hồi tin nhắn này" });
     }
 
     message.isDeleted = true;
     message.content = "Message revoked";
+    message.isPinned = false; // Bỏ ghim nếu tin nhắn đã được ghim
+    
     await message.save();
+    await redisClient.lRem(`pinned:${message.conversationId}`, 1, messageId); // Xóa khỏi danh sách ghim trong Redis nếu có
+    
 
     res.json({ message: "Tin nhắn đã được thu hồi" });
   } catch (error) {
@@ -102,6 +125,15 @@ exports.unpinMessage = async (req, res) => {
 
     // Xóa tin nhắn khỏi danh sách ghim
     await redisClient.lRem(`pinned:${conversationId}`, 1, messageId);
+
+     // Cập nhật trong cơ sở dữ liệu
+     const message = await Message.findById(messageId);
+     if (!message) {
+       return res.status(404).json({ message: "Tin nhắn không tồn tại" });
+     }
+     
+     message.isPinned = false;
+     await message.save();
 
     res.status(200).json({ message: "Tin nhắn đã được bỏ ghim" });
   } catch (error) {

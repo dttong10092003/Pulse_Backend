@@ -9,6 +9,7 @@ const {
   checkUserOnline,
   searchConversations,
   getAllConversations,
+  updateGroupConversation,
 } = require('../controllers/conversationController');
 
 const router = express.Router();
@@ -35,5 +36,8 @@ router.get('/online/:userId', checkUserOnline);
 
 // 📌 Tìm kiếm cuộc trò chuyện theo tên nhóm hoặc tên người còn lại
 router.get('/search', searchConversations);
+
+// 📌 Cập nhật thông tin nhóm trò chuyện (Đổi tên nhóm, avatar, ...)
+router.put('/group/update/:conversationId', updateGroupConversation)
 
 module.exports = router;
