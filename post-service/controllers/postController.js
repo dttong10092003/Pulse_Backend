@@ -81,5 +81,18 @@ const getPostById = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+// Lấy bài viết theo userId (Yêu cầu đăng nhập)
+const getPostsByUser = async (req, res) => {
+    try {
+        const userId = req.query.userId;
+        if (!userId) {
+            return res.status(400).json({ message: "Missing userId" });
+        }
 
-module.exports = { createPost, getAllPosts, getPostById, deletePost };
+        const posts = await Post.find({ userId }).sort({ createdAt: -1 });
+        res.json(posts);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+module.exports = { createPost, getAllPosts, getPostById, deletePost, getPostsByUser };
