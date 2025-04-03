@@ -26,4 +26,6 @@ router.post('/messages/unpin', authenticateToken, chatService.unpinMessage);
 router.get('/messages/pinned/:conversationId', authenticateToken, chatService.getPinnedMessages);
 router.post('/messages/revoke', authenticateToken, chatService.revokeMessage);
 
+router.put('/conversations/group/update/:conversationId', authenticateToken, chatService.updateGroupConversation); // Thêm route này
+
 module.exports = router;

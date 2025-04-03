@@ -65,19 +65,24 @@ exports.getAllConversations = async (req, res) => {
 
       // Lấy tin nhắn gần nhất
       const messages = await Message.find({ conversationId: conversation._id })
-        .sort({ timestamp: -1 })
+        .sort({ timestamp: 1 })
         .limit(10);
 
-      conversation.messages = messages.map(msg => ({
+      conversation.messages = messages.map(msg => {
+        const senderInfo = userMap[msg.senderId.toString()] || { name: 'Unknown', avatar: '' };
+
+        return {
         senderId: msg.senderId,
+        name: senderInfo.name,
         content: msg.content,
         type: msg.type,
         timestamp: msg.timestamp,
         isSentByUser: msg.senderId.toString() === userId,
-        senderAvatar: userMap[msg.senderId.toString()]?.avatar || '',
+        senderAvatar: senderInfo.avatar,
         isDeleted: msg.isDeleted || false,
         isPinned: msg.isPinned || false
-      }));
+        };
+      });
 
       return conversation;
     }));
@@ -89,62 +94,10 @@ exports.getAllConversations = async (req, res) => {
   }
 };
 
-    ///////
-    // Gọi API để lấy thông tin thành viên từ user-service
-//     const membersInfoPromises = conversations.map(async (conversation) => {
-//       const memberIds = conversation.members;
-//       console.log(`Member IDs: ${memberIds}`);
-
-      
-//       const userServiceUrl = process.env.USER_SERVICE_URL || 'http://user-service:5002';
-//       // Gọi API từ user-service để lấy thông tin các thành viên trong cuộc trò chuyện
-//       const response = await axios.post(`${userServiceUrl}/users/user-details-by-ids`, {
-//         userIds: memberIds,  // Gửi danh sách userIds vào body
-//       });
-
-//       // Gán thông tin thành viên vào cuộc trò chuyện
-//       console.log(`Response from user-service: ${JSON.stringify(response.data)}`);
-//       conversation.members = response.data; // Lưu danh sách thông tin thành viên
-
-
-
-
-// // Convert to plain JS object
-// const convObj = conversation.toObject();
-// convObj.members = response.data;
-
-// // Lấy 10 tin nhắn gần nhất
-// convObj.messages = await Message.find({ conversationId: conversation._id })
-//   .sort({ timestamp: -1 })
-//   .limit(10);
-
-// return convObj;
-
-
-
-
-
-//       console.log(conversation.members);
-//       console.log(`Updated conversation members: ${JSON.stringify(conversation.members)}`);
-//       conversation.messages = await Message.find({ conversationId: conversation._id })
-//         .sort({ timestamp: -1 })
-//         .limit(10);
-
-//       return conversation;
-//     });
-
-//     const updatedConversations = await Promise.all(membersInfoPromises);
-
-//     res.json(updatedConversations);
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: error.message });
-//   }
-// };
 
 exports.createOrGetPrivateConversation = async (req, res) => {
   try {
-    const { user1, user2, user2Name } = req.body;
+    const { user1, user2, user2Name, user2Avatar} = req.body;
     const conversationId = new mongoose.Types.ObjectId();
 
     let conversation = await Conversation.findOne({ 
@@ -158,7 +111,8 @@ exports.createOrGetPrivateConversation = async (req, res) => {
         conversationId, 
         members: [user1, user2], 
         isGroup: false, 
-        groupName: user2Name
+        groupName: user2Name,
+        avatar: user2Avatar || ''
       });
       await conversation.save();
     }
@@ -172,14 +126,15 @@ exports.createOrGetPrivateConversation = async (req, res) => {
 // 📌 Tạo nhóm chat
 exports.createGroupConversation = async (req, res) => {
   try {
-    const { groupName, members, adminId } = req.body;
+    const { groupName, members, adminId, avatar } = req.body;
 
     const newGroup = new Conversation({
       conversationId: new mongoose.Types.ObjectId(),
       groupName,
       members,
       isGroup: true,
-      adminId
+      adminId,
+      avatar: avatar || '', 
     });
 
     await newGroup.save();
@@ -330,6 +285,35 @@ exports.searchConversations = async (req, res) => {
 
     // ✅ Trả về danh sách chat phù hợp với keyword
     res.json([...groupChats, ...formattedPrivateChats]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 📌 Cập nhật thông tin nhóm (đổi tên, avatar, ...)
+exports.updateGroupConversation = async (req, res) => {
+  try {
+    const { conversationId } = req.params; // Lấy ID cuộc trò chuyện cần cập nhật
+    const { groupName, avatar } = req.body; // Các thông tin cần cập nhật
+
+    // Tìm cuộc trò chuyện theo ID và kiểm tra xem nó có phải nhóm không
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ message: "Cuộc trò chuyện không tồn tại" });
+    }
+
+    if (!conversation.isGroup) {
+      return res.status(400).json({ message: "Không thể thay đổi thông tin cuộc trò chuyện riêng tư" });
+    }
+
+    // Cập nhật thông tin nhóm (groupName và avatar)
+    if (groupName) conversation.groupName = groupName;
+    if (avatar !== undefined) conversation.avatar = avatar; // Kiểm tra xem có avatar mới không
+
+    // Lưu lại những thay đổi
+    await conversation.save();
+
+    res.status(200).json({ message: "Thông tin nhóm đã được cập nhật", conversation });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
