@@ -97,7 +97,7 @@ exports.getAllConversations = async (req, res) => {
 
 exports.createOrGetPrivateConversation = async (req, res) => {
   try {
-    const { user1, user2, user2Name, user2Avatar} = req.body;
+    const { user1, user2} = req.body;
     const conversationId = new mongoose.Types.ObjectId();
 
     let conversation = await Conversation.findOne({ 
@@ -106,13 +106,10 @@ exports.createOrGetPrivateConversation = async (req, res) => {
     });
 
     if (!conversation) {
-      // ✅ Đặt groupName = Tên người còn lại
       conversation = new Conversation({
         conversationId, 
         members: [user1, user2], 
-        isGroup: false, 
-        groupName: user2Name,
-        avatar: user2Avatar || ''
+        isGroup: false,
       });
       await conversation.save();
     }
