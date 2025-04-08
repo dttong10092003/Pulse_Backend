@@ -392,6 +392,91 @@ const getMe = async (req, res) => {
     res.status(401).json({ message: "Invalid token" });
   }
 };
+const otpStore = {}; // Dùng tạm bộ nhớ RAM, có thể thay bằng Redis
+
+const sendEmailOtp = async (req, res) => {
+  const { email } = req.body;
+
+  // Validate định dạng email
+  if (!email || !/.+@.+\..+/.test(email)) {
+    return res.status(400).json({ message: "Invalid email format" });
+  }
+
+  try {
+    // Kiểm tra email đã tồn tại trong bảng User của auth-service chưa
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already exists in User" });
+    }
+
+    // 🔁 Gọi API sang user-service để kiểm tra email trong UserDetail
+    const userServiceUrl = process.env.USER_SERVICE_URL || "http://user-service:5002";
+    const response = await axios.post(`${userServiceUrl}/users/check-email-phone`, { email });
+
+    if (response.data.exists) {
+      return res.status(400).json({ message: "Email already exists in UserDetail" });
+    }
+
+    // Tạo mã OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    otpStore[email] = otpCode;
+
+    // Gửi OTP qua email
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: "tinphan309z@gmail.com",
+        pass: "plxbmhiqvijtliqn",
+      },
+    });
+
+    await transporter.sendMail({
+      from: '"PULSE OTP" <tinphan309z@gmail.com>',
+      to: email,
+      subject: "🔐 Your PULSE Email Verification Code",
+      html: `
+        <div style="font-family: 'Arial', sans-serif; background-color: #f9f9f9; padding: 20px; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="background-color: #4CAF50; padding: 20px; text-align: center; color: white;">
+              <h1 style="margin: 0; font-size: 24px;">PULSE</h1>
+              <p style="margin: 0; font-size: 16px;">Secure Email Verification</p>
+            </div>
+            <div style="padding: 20px;">
+              <h2 style="color: #333; font-size: 22px;">Your OTP Code: <span style="color: #4CAF50;">${otpCode}</span></h2>
+              <p style="font-size: 16px; line-height: 1.5; margin-top: 20px;">Hi there,</p>
+              <p style="font-size: 16px; line-height: 1.5;">Please use the 6-digit code above to verify your email address. This code is valid for the next <strong>5 minutes</strong>.</p>
+              <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">If you did not request this code, please ignore this email or contact support.</p>
+            </div>
+            <div style="background-color: #f1f1f1; padding: 10px; text-align: center; font-size: 14px; color: #666;">
+              <p style="margin: 0;">Need help? <a href="mailto:support@pulse.com" style="color: #4CAF50; text-decoration: none;">Contact Support</a></p>
+            </div>
+          </div>
+        </div>
+      `
+    });
+
+    res.status(200).json({ message: "OTP sent to email" });
+
+  } catch (err) {
+    console.error("sendEmailOtp error:", err.message);
+    res.status(500).json({ message: "Failed to send OTP email" });
+  }
+};
+
+const verifyEmailOtp = async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return res.status(400).json({ message: "Email and OTP are required" });
+  }
+
+  if (otpStore[email] === otp) {
+    delete otpStore[email]; // Xác thực xong thì xóa
+    return res.status(200).json({ message: "OTP verified successfully" });
+  } else {
+    return res.status(400).json({ message: "Invalid OTP" });
+  }
+};
 
 
 module.exports = {
@@ -406,4 +491,6 @@ module.exports = {
   resetPasswordWithPhone,
   getMe,
   getUsernameById,
+  sendEmailOtp,
+  verifyEmailOtp,
 };
