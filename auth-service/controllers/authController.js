@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const nodemailer = require("nodemailer");
 const axios = require("axios");
+
 // Kiểm tra số điện thoại hoặc email đã tồn tại chưa
 const checkUserExists = async (req, res) => {
   try {
@@ -42,29 +43,67 @@ const registerUserWithPhone = async (req, res) => {
   }
 };
 
-// Đăng ký / Đăng nhập bằng Google OAuth2
 // const handleGoogleLogin = async (req, res) => {
-//     try {
-//         const { email, googleId } = req.body;
+//   try {
+//     const { email, googleId } = req.body;
 
-//         let user = await User.findOne({ email });
+//     let user = await User.findOne({ email });
 
-//         if (user) {
-//             // Nếu user đã có tài khoản, đăng nhập luôn
-//             const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-//             return res.status(200).json({ token, user });
-//         }
-
-//         // Nếu user chưa có tài khoản, tạo mới
-//         user = new User({ email, googleId, isVerified: false });
-//         await user.save();
-
-//         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-//         res.status(201).json({ token, user, message: "Please enter phone number to verify" });
-//     } catch (err) {
-//         res.status(500).json({ message: err.message });
+//     if (user) {
+//       const isVerified = !!(user.firstname && user.lastname); // chỉ cần 2 field là đủ xác minh
+//       const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+//       return res.status(200).json({ token, user, isVerified });
 //     }
+    
+
+//     // Nếu chưa tồn tại thì tạo mới user
+//     user = new User({
+//       email,
+//       googleId,
+//       username: email.split("@")[0],
+//       isVerified: false
+//     });
+
+//     await user.save();
+
+//     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+//     res.status(201).json({ token, user, isVerified: false });
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+// const handleGoogleLogin = async (req, res) => {
+//   try {
+//     const { email, googleId } = req.body;
+
+//     let user = await User.findOne({ email });
+
+//     if (user) {
+//       // ✅ Kiểm tra đã điền đầy đủ thông tin chưa
+//       const isVerified = !!(user.firstname && user.lastname); // có thể thêm dob, gender nếu cần
+//       const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+//       return res.status(200).json({ token, user, isVerified });
+//     }
+
+//     // ✅ Nếu user chưa tồn tại → tạo mới user với username mặc định
+//     user = new User({
+//       email,
+//       googleId,
+//       username: email.split("@")[0],
+//       isVerified: false
+//     });
+
+//     await user.save();
+
+//     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+//     // ✅ isVerified là false vì user mới tạo
+//     res.status(201).json({ token, user, isVerified: false });
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
 // };
 const handleGoogleLogin = async (req, res) => {
   try {
@@ -72,23 +111,44 @@ const handleGoogleLogin = async (req, res) => {
 
     let user = await User.findOne({ email });
 
-    if (user) {
-      // Nếu user đã có tài khoản, kiểm tra `isVerified`
-      const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-      return res.status(200).json({ token, user, isVerified: user.isVerified });
+    if (!user) {
+      // Nếu chưa tồn tại thì tạo mới user
+      user = new User({
+        email,
+        googleId,
+        username: email.split("@")[0],
+        isVerified: false
+      });
+      await user.save();
     }
 
-    // Nếu user chưa có tài khoản, tạo mới
-    user = new User({ email, googleId, isVerified: false });
-    await user.save();
+    // ✅ Gọi API sang user-service để kiểm tra có userDetail chưa
+    const userServiceUrl = process.env.USER_SERVICE_URL || "http://user-service:5002";
+    
+    let hasUserDetail = false;
+    try {
+      const detailRes = await axios.get(`${userServiceUrl}/users/${user._id}`);
+      hasUserDetail = !!(detailRes.data?.firstname && detailRes.data?.lastname);
+    } catch (err) {
+      console.warn("Không tìm thấy userDetail hoặc user-service lỗi:", err.message);
+    }
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    res.status(201).json({ token, user, isVerified: false });
+    res.status(200).json({
+      token,
+      user,
+      isVerified: hasUserDetail
+    });
+
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Google login error:", err.message);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
+
+
+
 // Đăng nhập bằng username/password
 const loginUser = async (req, res) => {
   try {
