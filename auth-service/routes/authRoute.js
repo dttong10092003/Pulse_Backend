@@ -10,7 +10,9 @@ const {
     resetPasswordWithToken,
     resetPasswordWithPhone,
     getMe,
-    getUsernameById
+    getUsernameById,
+    sendEmailOtp,
+    verifyEmailOtp
 } = require('../controllers/authController');
 
 const router = express.Router();
@@ -47,5 +49,9 @@ router.get("/me", getMe);
 
 // Lấy username từ userId
 router.get('/username/:id', getUsernameById);
+
+router.post("/send-email-otp", sendEmailOtp);
+router.post("/verify-email-otp", verifyEmailOtp);
+
 
 module.exports = router;

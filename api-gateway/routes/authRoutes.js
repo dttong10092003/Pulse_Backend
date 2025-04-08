@@ -12,4 +12,6 @@ router.post("/reset-password", authService.resetPasswordWithToken);
 router.post("/reset-password-phone", authService.resetPasswordWithPhone);
 router.get("/me", authService.getMe);
 router.get("/username/:id", authService.getUsernameById);
+router.post("/send-email-otp", authService.sendEmailOtp);
+router.post("/verify-email-otp", authService.verifyEmailOtp);
 module.exports = router;
