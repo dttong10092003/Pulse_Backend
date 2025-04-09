@@ -2,7 +2,7 @@ const express = require('express');
 const {
     checkUserExists,
     registerUserWithPhone,
-    handleGoogleLogin,
+    handleGoogleLoginRegister,
     loginUser,
     authenticateToken,
     checkEmailOrPhoneExists,
@@ -12,7 +12,8 @@ const {
     getMe,
     getUsernameById,
     sendEmailOtp,
-    verifyEmailOtp
+    verifyEmailOtp,
+    loginGoogle
 } = require('../controllers/authController');
 
 const router = express.Router();
@@ -24,7 +25,7 @@ router.post('/check-user', checkUserExists);
 router.post('/register/phone', registerUserWithPhone);
 
 // Đăng ký / Đăng nhập bằng Google OAuth2
-router.post('/login/google', handleGoogleLogin);
+router.post('/register/google', handleGoogleLoginRegister);
 
 // Đăng nhập bằng username/password
 router.post('/login', loginUser);
@@ -53,5 +54,6 @@ router.get('/username/:id', getUsernameById);
 router.post("/send-email-otp", sendEmailOtp);
 router.post("/verify-email-otp", verifyEmailOtp);
 
+router.post('/login/google', loginGoogle);             // dùng khi Login
 
 module.exports = router;

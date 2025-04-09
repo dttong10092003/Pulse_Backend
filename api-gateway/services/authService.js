@@ -20,9 +20,9 @@ const registerWithPhone = async (req, res) => {
   }
 };
 
-const loginWithGoogle = async (req, res) => {
+const loginWithGoogleRegister = async (req, res) => {
   try {
-    const response = await axios.post(`${AUTH_SERVICE_URL}/auth/login/google`, req.body);
+    const response = await axios.post(`${AUTH_SERVICE_URL}/auth/register/google`, req.body);
     res.status(response.status).json(response.data);
   } catch (error) {
     res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
@@ -108,6 +108,15 @@ const verifyEmailOtp = async (req, res) => {
   }
 }
 
-module.exports = { checkUser, registerWithPhone, loginWithGoogle, loginWithUsername, 
+const loginGoogle = async (req, res) => {
+  try {
+    const response = await axios.post(`${AUTH_SERVICE_URL}/auth/login/google`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+}
+
+module.exports = { checkUser, registerWithPhone, loginWithGoogleRegister, loginWithUsername, 
   checkEmailOrPhone, sendResetPasswordToEmail, 
-  resetPasswordWithToken, resetPasswordWithPhone, getMe, getUsernameById, sendEmailOtp, verifyEmailOtp };
+  resetPasswordWithToken, resetPasswordWithPhone, getMe, getUsernameById, sendEmailOtp, verifyEmailOtp, loginGoogle };
