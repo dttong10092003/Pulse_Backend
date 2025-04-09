@@ -21,6 +21,7 @@ const verifyToken = (req) => {
         throw { status: 403, message: 'Forbidden: Invalid token' };
     }
 };
+
 // Lấy thông tin user theo ID
 const getUserById = async (req, res) => {
     try {
@@ -33,6 +34,7 @@ const getUserById = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
 const createUserDetail = async (req, res) => {
     try {
         console.log('Data received from frontend:', req.body);
@@ -67,6 +69,7 @@ const createUserDetail = async (req, res) => {
         res.status(err.status || 500).json({ message: err.message });
     }
 };
+
 const updateUser = async (req, res) => {
     try {
         const { firstname, lastname, dob, gender, phoneNumber, email, address, bio, avatar, backgroundAvatar } = req.body;

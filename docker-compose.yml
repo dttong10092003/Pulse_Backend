@@ -95,6 +95,18 @@ services:
       - mongo
       - auth-service
 
+  notification-service: 
+    build:
+      context: ./notification-service
+    ports:
+      - "5007:5007"
+    environment:
+      - MONGODB_URI=mongodb+srv://thanhnam:thanhnam@cluster01.b0n1v.mongodb.net/?retryWrites=true&w=majority&appName=Cluster01
+      - JWT_SECRET=mySuperSecretKey12345!@#123
+    depends_on:
+      - mongo
+      - auth-service
+
   redis: 
     image: redis
     ports:

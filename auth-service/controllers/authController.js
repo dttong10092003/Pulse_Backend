@@ -23,7 +23,7 @@ const checkUserExists = async (req, res) => {
 const registerUserWithPhone = async (req, res) => {
   try {
     const { phoneNumber, username, password } = req.body;
-
+   
     const existingUser = await User.findOne({ $or: [{ phoneNumber }, { username }] });
     if (existingUser) {
       return res.status(400).json({ message: 'Phone number or Username already exists' });
@@ -89,6 +89,7 @@ const handleGoogleLogin = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 // Đăng nhập bằng username/password
 const loginUser = async (req, res) => {
   try {
@@ -163,6 +164,7 @@ const checkEmailOrPhoneExists = async (req, res) => {
     return res.status(500).json({ message: err.message });
   }
 };
+
 const sendResetPasswordToEmail = async (req, res) => {
   try {
     const { email } = req.body;
