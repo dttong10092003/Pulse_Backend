@@ -49,88 +49,99 @@ const registerUserWithPhone = async (req, res) => {
 
 //     let user = await User.findOne({ email });
 
-//     if (user) {
-//       const isVerified = !!(user.firstname && user.lastname); // chỉ cần 2 field là đủ xác minh
-//       const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-//       return res.status(200).json({ token, user, isVerified });
+//     if (!user) {
+//       // Nếu chưa tồn tại thì tạo mới user
+//       user = new User({
+//         email,
+//         googleId,
+//         username: email.split("@")[0],
+//         isVerified: false
+//       });
+//       await user.save();
 //     }
+
+//     // ✅ Gọi API sang user-service để kiểm tra có userDetail chưa
+//     const userServiceUrl = process.env.USER_SERVICE_URL || "http://user-service:5002";
     
-
-//     // Nếu chưa tồn tại thì tạo mới user
-//     user = new User({
-//       email,
-//       googleId,
-//       username: email.split("@")[0],
-//       isVerified: false
-//     });
-
-//     await user.save();
-
-//     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-//     res.status(201).json({ token, user, isVerified: false });
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// };
-
-// const handleGoogleLogin = async (req, res) => {
-//   try {
-//     const { email, googleId } = req.body;
-
-//     let user = await User.findOne({ email });
-
-//     if (user) {
-//       // ✅ Kiểm tra đã điền đầy đủ thông tin chưa
-//       const isVerified = !!(user.firstname && user.lastname); // có thể thêm dob, gender nếu cần
-//       const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-//       return res.status(200).json({ token, user, isVerified });
+//     let hasUserDetail = false;
+//     try {
+//       const detailRes = await axios.get(`${userServiceUrl}/users/${user._id}`);
+//       hasUserDetail = !!(detailRes.data?.firstname && detailRes.data?.lastname);
+//     } catch (err) {
+//       console.warn("Không tìm thấy userDetail hoặc user-service lỗi:", err.message);
 //     }
 
-//     // ✅ Nếu user chưa tồn tại → tạo mới user với username mặc định
-//     user = new User({
-//       email,
-//       googleId,
-//       username: email.split("@")[0],
-//       isVerified: false
-//     });
-
-//     await user.save();
-
 //     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-//     // ✅ isVerified là false vì user mới tạo
-//     res.status(201).json({ token, user, isVerified: false });
+//     res.status(200).json({
+//       token,
+//       user,
+//       isVerified: hasUserDetail
+//     });
+
 //   } catch (err) {
-//     res.status(500).json({ message: err.message });
+//     console.error("Google login error:", err.message);
+//     res.status(500).json({ message: "Internal server error" });
 //   }
 // };
-const handleGoogleLogin = async (req, res) => {
+
+// HÀM GG Xử Lý login register
+const handleGoogleLoginRegister = async (req, res) => {
   try {
     const { email, googleId } = req.body;
 
+    // ✅ 1. Kiểm tra trong auth-service
     let user = await User.findOne({ email });
-
-    if (!user) {
-      // Nếu chưa tồn tại thì tạo mới user
-      user = new User({
-        email,
-        googleId,
-        username: email.split("@")[0],
-        isVerified: false
-      });
-      await user.save();
+    if (user) {
+      return res.status(409).json({ message: "Email already registered (auth-service)" });
     }
 
-    // ✅ Gọi API sang user-service để kiểm tra có userDetail chưa
+    // ✅ 2. Kiểm tra trong user-service
     const userServiceUrl = process.env.USER_SERVICE_URL || "http://user-service:5002";
-    
+    const checkRes = await axios.post(`${userServiceUrl}/users/check-email-phone`, { email });
+
+    if (checkRes.data.exists) {
+      return res.status(409).json({ message: "Email already registered (user-service)" });
+    }
+
+    // ✅ 3. Tạo mới nếu chưa có ở đâu cả
+    user = new User({
+      email,
+      googleId,
+      username: email.split("@")[0],
+      isVerified: false
+    });
+    await user.save();
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+    res.status(201).json({ token, user, isVerified: false });
+  } catch (err) {
+    console.error("Google login error:", err.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+// ✅ Login bằng Google KHÔNG kiểm tra email tồn tại
+const loginGoogle = async (req, res) => {
+  try {
+    const { email, googleId } = req.body;
+
+    // Tìm user theo email + googleId
+    const user = await User.findOne({ email, googleId });
+    if (!user) {
+      return res.status(404).json({ message: 'Google account not found. Please register first.' });
+    }
+
+    const userServiceUrl = process.env.USER_SERVICE_URL || "http://user-service:5002";
     let hasUserDetail = false;
+
     try {
       const detailRes = await axios.get(`${userServiceUrl}/users/${user._id}`);
       hasUserDetail = !!(detailRes.data?.firstname && detailRes.data?.lastname);
     } catch (err) {
-      console.warn("Không tìm thấy userDetail hoặc user-service lỗi:", err.message);
+      console.warn("User-service error:", err.message);
     }
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -140,12 +151,13 @@ const handleGoogleLogin = async (req, res) => {
       user,
       isVerified: hasUserDetail
     });
-
   } catch (err) {
     console.error("Google login error:", err.message);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+
 
 
 
@@ -482,7 +494,7 @@ const verifyEmailOtp = async (req, res) => {
 module.exports = {
   checkUserExists,
   registerUserWithPhone,
-  handleGoogleLogin,
+  handleGoogleLoginRegister,
   loginUser,
   authenticateToken,
   checkEmailOrPhoneExists,
@@ -493,4 +505,5 @@ module.exports = {
   getUsernameById,
   sendEmailOtp,
   verifyEmailOtp,
+  loginGoogle,
 };
