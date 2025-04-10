@@ -13,7 +13,8 @@ const {
     getUsernameById,
     sendEmailOtp,
     verifyEmailOtp,
-    loginGoogle
+    loginGoogle,
+    changePassword,
 } = require('../controllers/authController');
 
 const router = express.Router();
@@ -54,6 +55,8 @@ router.get('/username/:id', getUsernameById);
 router.post("/send-email-otp", sendEmailOtp);
 router.post("/verify-email-otp", verifyEmailOtp);
 
-router.post('/login/google', loginGoogle);             // dùng khi Login
+router.post('/login/google', loginGoogle); // dùng khi Login
+
+router.post('/change-password',changePassword );
 
 module.exports = router;

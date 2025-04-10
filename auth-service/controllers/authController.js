@@ -43,68 +43,26 @@ const registerUserWithPhone = async (req, res) => {
   }
 };
 
-// const handleGoogleLogin = async (req, res) => {
-//   try {
-//     const { email, googleId } = req.body;
-
-//     let user = await User.findOne({ email });
-
-//     if (!user) {
-//       // Nếu chưa tồn tại thì tạo mới user
-//       user = new User({
-//         email,
-//         googleId,
-//         username: email.split("@")[0],
-//         isVerified: false
-//       });
-//       await user.save();
-//     }
-
-//     // ✅ Gọi API sang user-service để kiểm tra có userDetail chưa
-//     const userServiceUrl = process.env.USER_SERVICE_URL || "http://user-service:5002";
-    
-//     let hasUserDetail = false;
-//     try {
-//       const detailRes = await axios.get(`${userServiceUrl}/users/${user._id}`);
-//       hasUserDetail = !!(detailRes.data?.firstname && detailRes.data?.lastname);
-//     } catch (err) {
-//       console.warn("Không tìm thấy userDetail hoặc user-service lỗi:", err.message);
-//     }
-
-//     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-//     res.status(200).json({
-//       token,
-//       user,
-//       isVerified: hasUserDetail
-//     });
-
-//   } catch (err) {
-//     console.error("Google login error:", err.message);
-//     res.status(500).json({ message: "Internal server error" });
-//   }
-// };
-
 // HÀM GG Xử Lý login register
 const handleGoogleLoginRegister = async (req, res) => {
   try {
     const { email, googleId } = req.body;
 
-    // ✅ 1. Kiểm tra trong auth-service
+    //  1. Kiểm tra trong auth-service
     let user = await User.findOne({ email });
     if (user) {
-      return res.status(409).json({ message: "Email already registered (auth-service)" });
+      return res.status(409).json({ message: "Email already registered", status: 409 });
     }
 
-    // ✅ 2. Kiểm tra trong user-service
+    //  2. Kiểm tra trong user-service
     const userServiceUrl = process.env.USER_SERVICE_URL || "http://user-service:5002";
     const checkRes = await axios.post(`${userServiceUrl}/users/check-email-phone`, { email });
 
     if (checkRes.data.exists) {
-      return res.status(409).json({ message: "Email already registered (user-service)" });
+      return res.status(409).json({ message: "Email already registered", status: 409 });
     }
 
-    // ✅ 3. Tạo mới nếu chưa có ở đâu cả
+    //  3. Tạo mới nếu chưa có ở đâu cả
     user = new User({
       email,
       googleId,
@@ -123,7 +81,7 @@ const handleGoogleLoginRegister = async (req, res) => {
 };
 
 
-// ✅ Login bằng Google KHÔNG kiểm tra email tồn tại
+//  Login bằng Google KHÔNG kiểm tra email tồn tại
 const loginGoogle = async (req, res) => {
   try {
     const { email, googleId } = req.body;
@@ -156,10 +114,6 @@ const loginGoogle = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
-
-
-
 
 // Đăng nhập bằng username/password
 const loginUser = async (req, res) => {
@@ -421,7 +375,7 @@ const sendEmailOtp = async (req, res) => {
       return res.status(400).json({ message: "Email already exists in User" });
     }
 
-    // 🔁 Gọi API sang user-service để kiểm tra email trong UserDetail
+    //  Gọi API sang user-service để kiểm tra email trong UserDetail
     const userServiceUrl = process.env.USER_SERVICE_URL || "http://user-service:5002";
     const response = await axios.post(`${userServiceUrl}/users/check-email-phone`, { email });
 
@@ -489,6 +443,42 @@ const verifyEmailOtp = async (req, res) => {
     return res.status(400).json({ message: "Invalid OTP" });
   }
 };
+const changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const token = req.header("Authorization");
+
+    if (!token) return res.status(401).json({ message: "Missing token" });
+
+    // Xác thực token
+    const decoded = jwt.verify(
+      token.startsWith("Bearer ") ? token.slice(7) : token,
+      process.env.JWT_SECRET
+    );
+
+    const user = await User.findById(decoded.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Nếu user đăng nhập bằng Google thì không có mật khẩu để đổi
+    if (!user.password) {
+      return res.status(400).json({ message: "This account doesn't use password login" });
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Old password is incorrect" });
+    }
+
+    const hashedNew = await bcrypt.hash(newPassword, 10);
+    user.password = hashedNew;
+    await user.save();
+
+    return res.status(200).json({ message: "Password changed successfully" });
+  } catch (err) {
+    console.error("Change password error:", err.message);
+    return res.status(500).json({ message: "Server error while changing password" });
+  }
+};
 
 
 module.exports = {
@@ -506,4 +496,5 @@ module.exports = {
   sendEmailOtp,
   verifyEmailOtp,
   loginGoogle,
+  changePassword,
 };
