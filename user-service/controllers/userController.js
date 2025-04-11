@@ -208,7 +208,25 @@ const getUserDetailsByIds = async (req, res) => {
     }
 };
 
+const getTop10Users = async (req, res) => {
+    try {
+        const userId = verifyToken(req);
+        console.log("✅ User ID from token:", userId);
 
+        const users = await UserDetail.find({ userId: { $ne: userId } })
+            .sort({ createdAt: -1 })
+            .limit(10);
+        
+        if (users.length === 0) {
+            return res.status(404).json({ message: 'No users found' });
+        }
 
+        console.log("✅ Retrieved users:", users);
+        res.json(users);
+    } catch (err) {
+        console.error("❌ Error in getTop10Users:", err.message);
+        res.status(500).json({ message: err.message });
+    }
+};
 
-module.exports = { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds };
+module.exports = { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users };

@@ -9,5 +9,6 @@ router.post("/", authenticateToken, userService.createUserDetail);
 router.post("/check-email-phone", userService.checkEmailOrPhoneExists);
 router.get("/user-details/:email", userService.getUserByEmail);
 router.post('/user-details-by-ids', authenticateToken, userService.getUserDetailsByIds);
+router.post("/top10-users", authenticateToken, userService.getTop10Users); // Lấy danh sách 10 người dùng
 
 module.exports = router;

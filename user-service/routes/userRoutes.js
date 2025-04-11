@@ -12,4 +12,8 @@ router.get('/user-details/:email', getUserByEmail);
 
 // Thêm route mới để lấy danh sách UserDetail từ danh sách userId
 router.post('/user-details-by-ids', getUserDetailsByIds);
+
+// Thêm route mới để lấy danh sách 10 người dùng
+router.post('/top10-users', getTop10Users); // Lấy danh sách 10 người dùng
+
 module.exports = router;
