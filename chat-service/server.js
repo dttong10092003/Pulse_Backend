@@ -43,7 +43,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('sendMessage', async ({ conversationId, senderId, type, content }) => {
-    const newMessage = new Message({ conversationId, senderId, type, content, timestamp: new Date().toISOString(), isDeleted: false });
+    console.log('Received message from client:', content);
+
+    const newMessage = new Message({ conversationId, senderId, type, content, timestamp: new Date().toISOString(), isDeleted: false, isPinned: false });
 
     try {
       await newMessage.save();  // Lưu tin nhắn vào MongoDB
@@ -52,7 +54,8 @@ io.on('connection', (socket) => {
       await redisClient.del(`messages:${conversationId}`);
 
       // Gửi tin nhắn tới các client trong phòng chat tương ứng
-      io.to(conversationId).emit('newMessage', newMessage);
+      // io.to(conversationId).emit('newMessage', newMessage);
+      io.to(conversationId).emit('receiveMessage', newMessage);
       console.log('✅ Sent new message to room:', conversationId);
     } catch (error) {
       console.error('Error sending message:', error);
