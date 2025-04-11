@@ -42,7 +42,7 @@ io.on('connection', (socket) => {
     console.log(`📌 User joined room: ${conversationId}`);
   });
 
-  socket.on('sendMessage', async ({ conversationId, senderId, type, content }) => {
+  socket.on('sendMessage', async ({ conversationId, senderId, type, content, name, senderAvatar }) => {
     console.log('Received message from client:', content);
 
     const newMessage = new Message({ conversationId, senderId, type, content, timestamp: new Date().toISOString(), isDeleted: false, isPinned: false });
@@ -55,7 +55,11 @@ io.on('connection', (socket) => {
 
       // Gửi tin nhắn tới các client trong phòng chat tương ứng
       // io.to(conversationId).emit('newMessage', newMessage);
-      io.to(conversationId).emit('receiveMessage', newMessage);
+      io.to(conversationId).emit('receiveMessage', {
+        ...newMessage.toObject(),
+        name,
+        senderAvatar,
+      });
       console.log('✅ Sent new message to room:', conversationId);
     } catch (error) {
       console.error('Error sending message:', error);
