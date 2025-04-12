@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
-const UserDetail = require('../models/userDetail');
+const UserDetail = require('../models/userDetail'); // Import model UserDetail
+const mongoose = require('mongoose');
+const ObjectId = mongoose.Types.ObjectId;
 // Hàm xác thực JWT và lấy userId
 const verifyToken = (req) => {
     const authHeader = req.headers.authorization;
@@ -210,23 +212,23 @@ const getUserDetailsByIds = async (req, res) => {
 
 const getTop10Users = async (req, res) => {
     try {
-        const userId = verifyToken(req);
-        console.log("✅ User ID from token:", userId);
-
-        const users = await UserDetail.find({ userId: { $ne: userId } })
-            .sort({ createdAt: -1 })
-            .limit(10);
-        
-        if (users.length === 0) {
-            return res.status(404).json({ message: 'No users found' });
-        }
-
-        console.log("✅ Retrieved users:", users);
-        res.json(users);
+      const { excludeUserId } = req.query;
+  
+      // Kiểm tra hợp lệ ObjectId
+      let filter = {};
+      if (excludeUserId && mongoose.Types.ObjectId.isValid(excludeUserId)) {
+        filter = { userId: { $ne: new ObjectId(excludeUserId) } };
+      }
+  
+      const users = await UserDetail.find(filter)
+        .sort({ createdAt: -1 })
+        .limit(10);
+  
+      res.status(200).json(users);
     } catch (err) {
-        console.error("❌ Error in getTop10Users:", err.message);
-        res.status(500).json({ message: err.message });
+      console.error("❌ Error in getTop10Users (user-service):", err.message);
+      res.status(500).json({ message: err.message });
     }
-};
+  };
 
 module.exports = { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users };

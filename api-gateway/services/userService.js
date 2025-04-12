@@ -76,23 +76,19 @@ const getUserDetailsByIds = async (req, res) => {
 // Tạo hàm lấy danh sách 10 người dùng trừ người dùng hiện tại và sắp xếp theo thời gian tạo
 const getTop10Users = async (req, res) => {
   try {
-    const userId = verifyToken(req); // Lấy userId từ token
-    console.log("✅ User ID from token:", userId);
+    const excludeUserId = req.query.userId;
 
-    // Lấy danh sách 10 người dùng trừ người dùng đang đăng nhập, sắp xếp theo thời gian tạo (createdAt)
-    const users = await axios.get(`${USER_SERVICE_URL}/users`, {
-      params: { excludeUserId: userId, limit: 10, sortBy: 'createdAt' }
+    const response = await axios.get(`${USER_SERVICE_URL}/users/top10-users`, {
+      params: { excludeUserId },
     });
 
-    if (users.data.length === 0) {
-      return res.status(404).json({ message: 'No users found' });
-    }
-
-    res.json(users.data);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(200).json(response.data);
+  } catch (error) {
+    console.error("❌ Error in API Gateway getTop10Users:", error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || error.message,
+    });
   }
 };
-
 
 module.exports = { getUser, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users };

@@ -9,7 +9,6 @@ app.use(express.json({ limit: '10mb' })); // test giới hạn base64, tuần sa
 
 app.use(cors());
 
-
 // Import routes
 const authRoutes = require("./routes/authRoutes");
 const postRoutes = require("./routes/postRoutes");
