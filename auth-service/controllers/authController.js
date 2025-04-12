@@ -480,6 +480,21 @@ const changePassword = async (req, res) => {
   }
 };
 
+const getPhoneNumber = async (req, res) => {
+  const token = req.header("Authorization");
+  if (!token) return res.status(401).json({ message: "Missing token" });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId).select("phoneNumber");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    return res.status(200).json({ phoneNumber: user.phoneNumber });
+  } catch (err) {
+    console.error("getPhoneNumber error:", err.message);
+    return res.status(401).json({ message: "Invalid token" });
+  }
+};
 
 module.exports = {
   checkUserExists,
@@ -497,4 +512,5 @@ module.exports = {
   verifyEmailOtp,
   loginGoogle,
   changePassword,
+  getPhoneNumber,
 };

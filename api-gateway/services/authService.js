@@ -124,7 +124,15 @@ const changePassword = async (req, res) => {
     res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
   }
 }
+const getPhoneNumber = async (req, res) => {
+  try {
+    const response = await axios.get(`${AUTH_SERVICE_URL}/auth/phone`, { headers: { Authorization: req.headers.authorization } });
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+}
 
 module.exports = { checkUser, registerWithPhone, loginWithGoogleRegister, loginWithUsername, 
   checkEmailOrPhone, sendResetPasswordToEmail, 
-  resetPasswordWithToken, resetPasswordWithPhone, getMe, getUsernameById, sendEmailOtp, verifyEmailOtp, loginGoogle, changePassword };
+  resetPasswordWithToken, resetPasswordWithPhone, getMe, getUsernameById, sendEmailOtp, verifyEmailOtp, loginGoogle, changePassword, getPhoneNumber };
