@@ -2,7 +2,7 @@
 docker compose down
 docker compose up --build
 
-npm install nodemailer trong auth-service 
+npm install nodemailer trong auth-service
 
 -> cd api-gateway: npm install cors
 
