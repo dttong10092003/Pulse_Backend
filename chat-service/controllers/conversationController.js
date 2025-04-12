@@ -65,8 +65,7 @@ exports.getAllConversations = async (req, res) => {
 
       // Lấy tin nhắn gần nhất
       const messages = await Message.find({ conversationId: conversation._id })
-        .sort({ timestamp: 1 })
-        .limit(10);
+        .sort({ timestamp: 1 });
 
       conversation.messages = messages.map(msg => {
         const senderInfo = userMap[msg.senderId.toString()] || { name: 'Unknown', avatar: '' };
