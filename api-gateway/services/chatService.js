@@ -2,6 +2,15 @@ const axios = require("axios");
 
 const CHAT_SERVICE_URL = process.env.CHAT_SERVICE_URL;
 
+const getAllConversations = async (req, res) => {
+  try {
+    const response = await axios.get(`${CHAT_SERVICE_URL}/conversations/all/${req.params.userId}`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+};
+
 // 1️⃣ Kiểm tra trạng thái online của user
 const checkUserOnline = async (req, res) => {
   try {
@@ -163,7 +172,22 @@ const unpinMessage = async (req, res) => {
   }
 };
 
+const updateGroupConversation = async (req, res) => {
+  try {
+    const { conversationId } = req.params; // Lấy ID cuộc trò chuyện cần cập nhật
+    const { groupName, avatar } = req.body; // Các thông tin cần cập nhật
+
+    const response = await axios.put(`${CHAT_SERVICE_URL}/conversations/group/update/${conversationId}`, { groupName, avatar });
+    
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+};
+
 module.exports = {
+  updateGroupConversation,
+  getAllConversations,
   checkUserOnline,
   createOrGetPrivateConversation,
   createGroupConversation,

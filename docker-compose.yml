@@ -22,8 +22,12 @@ services:
     environment:
       - MONGODB_URI=mongodb+srv://auth123:auth123@cluster0.gmid9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - JWT_SECRET=mySuperSecretKey12345!@#123
+      - USER_SERVICE_URL=http://user-service:5002
+      - FRONTEND_URL=http://localhost:4000
+
     depends_on:
       - mongo
+      - user-service
 
   post-service: 
     build:
@@ -31,7 +35,7 @@ services:
     ports:
       - "5001:5001"
     environment:
-      - MONGODB_URI=mongodb+srv://pulse:pulse@pulse.01h26.mongodb.net/?retryWrites=true&w=majority&appName=Pulse
+      - MONGODB_URI=mongodb+srv://tinphan309z:tinphan309z@cluster0.dvppvh4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - AUTH_SERVICE_URL=http://auth-service:5000
       - JWT_SECRET=mySuperSecretKey12345!@#123
     depends_on:
@@ -45,6 +49,7 @@ services:
     environment:
       - MONGODB_URI=mongodb+srv://auth123:auth123@cluster0.gmid9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - JWT_SECRET=mySuperSecretKey12345!@#123
+      - AUTH_SERVICE_URL=http://auth-service:5000
     depends_on:
       - mongo 
   like-service: 
@@ -52,7 +57,7 @@ services:
     ports:
       - "5003:5003"
     environment:
-      - MONGODB_URI=mongodb+srv://pulse:pulse@pulse.01h26.mongodb.net/?retryWrites=true&w=majority&appName=Pulse
+      - MONGODB_URI=mongodb+srv://tinphan309z:tinphan309z@cluster0.dvppvh4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - JWT_SECRET=mySuperSecretKey12345!@#123
     depends_on:
       - mongo
@@ -63,7 +68,7 @@ services:
     ports:
       - "5004:5004"
     environment:
-      - MONGODB_URI=mongodb+srv://pulse:pulse@pulse.01h26.mongodb.net/?retryWrites=true&w=majority&appName=Pulse
+      - MONGODB_URI=mongodb+srv://tinphan309z:tinphan309z@cluster0.dvppvh4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - JWT_SECRET=mySuperSecretKey12345!@#123
     depends_on:
       - mongo
@@ -74,11 +79,13 @@ services:
     ports:
       - "5005:5005"
     environment:
-      - MONGODB_URI=mongodb+srv://chat123:chat123@cluster0.ezmiy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - MONGODB_URI=mongodb+srv://message:message@cluster0.pj1pmat.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - REDIS_URL=redis://redis:6379
+      - USER_SERVICE_URL=http://user-service:5002
     depends_on:
       - mongo
       - redis
+      - user-service
   follow-service:
     build:
       context: ./follow-service

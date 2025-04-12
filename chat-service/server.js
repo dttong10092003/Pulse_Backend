@@ -31,6 +31,7 @@ app.use('/conversations', conversationRoutes);
 io.on('connection', (socket) => {
   console.log('🔥 User connected:', socket.id);
 
+  // Khi người dùng online
   socket.on('userOnline', async (userId) => {
     await redisClient.set(`online:${userId}`, '1', { EX: 300 }); // Online trong 5 phút
     console.log(`✅ User ${userId} is online`);
@@ -41,17 +42,34 @@ io.on('connection', (socket) => {
     console.log(`📌 User joined room: ${conversationId}`);
   });
 
-  socket.on('sendMessage', async ({ conversationId, senderId, type, content }) => {
-    const newMessage = new Message({ conversationId, senderId, type, content });
-    await newMessage.save();
-    await redisClient.del(`messages:${conversationId}`);
+  socket.on('sendMessage', async ({ conversationId, senderId, type, content, name, senderAvatar }) => {
+    console.log('Received message from client:', content);
 
-    io.to(conversationId).emit('newMessage', newMessage);
+    const newMessage = new Message({ conversationId, senderId, type, content, timestamp: new Date().toISOString(), isDeleted: false, isPinned: false });
+
+    try {
+      await newMessage.save();  // Lưu tin nhắn vào MongoDB
+
+      // Xóa cache của Redis nếu có tin nhắn mới
+      await redisClient.del(`messages:${conversationId}`);
+
+      // Gửi tin nhắn tới các client trong phòng chat tương ứng
+      // io.to(conversationId).emit('newMessage', newMessage);
+      io.to(conversationId).emit('receiveMessage', {
+        ...newMessage.toObject(),
+        name,
+        senderAvatar,
+      });
+      console.log('✅ Sent new message to room:', conversationId);
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
   });
 
+   // Khi người dùng rời phòng (disconnect)
   socket.on('disconnect', async () => {
     console.log('❌ User disconnected:', socket.id);
-    await redisClient.del(`online:${socket.id}`);
+    // await redisClient.del(`online:${socket.id}`);
   });
 });
 

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const ConversationSchema = new mongoose.Schema({
   members: { type: [mongoose.Schema.Types.ObjectId], required: true },
+  avatar: { type: String, default: '' },
   isGroup: { type: Boolean, default: false },
   groupName: { type: String, default: '' },
   adminId: { type: mongoose.Schema.Types.ObjectId, default: null },

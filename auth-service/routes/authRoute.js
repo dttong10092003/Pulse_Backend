@@ -2,9 +2,20 @@ const express = require('express');
 const {
     checkUserExists,
     registerUserWithPhone,
-    handleGoogleLogin,
+    handleGoogleLoginRegister,
     loginUser,
-    authenticateToken
+    authenticateToken,
+    checkEmailOrPhoneExists,
+    sendResetPasswordToEmail,
+    resetPasswordWithToken,
+    resetPasswordWithPhone,
+    getMe,
+    getUsernameById,
+    sendEmailOtp,
+    verifyEmailOtp,
+    loginGoogle,
+    changePassword,
+    getPhoneNumber
 } = require('../controllers/authController');
 
 const router = express.Router();
@@ -16,7 +27,7 @@ router.post('/check-user', checkUserExists);
 router.post('/register/phone', registerUserWithPhone);
 
 // Đăng ký / Đăng nhập bằng Google OAuth2
-router.post('/login/google', handleGoogleLogin);
+router.post('/register/google', handleGoogleLoginRegister);
 
 // Đăng nhập bằng username/password
 router.post('/login', loginUser);
@@ -25,5 +36,30 @@ router.post('/login', loginUser);
 router.get('/verify-token', authenticateToken, (req, res) => {
     res.json({ message: 'Token is valid', user: req.user });
 });
+
+// Kiểm tra email hoặc số điện thoại đã tồn tại
+router.post('/check-email-phone', checkEmailOrPhoneExists);
+
+// Send reset password link to email
+router.post('/send-reset-email', sendResetPasswordToEmail);
+
+// Kiểm tra token reset password
+router.post('/reset-password', resetPasswordWithToken); 
+
+router.post('/reset-password-phone', resetPasswordWithPhone); // Phone number
+
+router.get("/me", getMe);
+
+// Lấy username từ userId
+router.get('/username/:id', getUsernameById);
+
+router.post("/send-email-otp", sendEmailOtp);
+router.post("/verify-email-otp", verifyEmailOtp);
+
+router.post('/login/google', loginGoogle); // dùng khi Login
+
+router.post('/change-password',changePassword );
+router.get('/phone', getPhoneNumber); // dùng khi Login
+
 
 module.exports = router;

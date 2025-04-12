@@ -41,4 +41,14 @@ const deletePost = async (req, res) => {
   }
 };
 
-module.exports = { createPost, getPosts, deletePost, getPostById };
+const getUserPosts = async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const response = await axios.get(`${POST_SERVICE_URL}/posts/user/posts?userId=${userId}`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+};
+
+module.exports = { createPost, getPosts, deletePost, getPostById, getUserPosts };

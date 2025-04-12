@@ -4,6 +4,7 @@ const { authenticateToken } = require('../middleware/authMiddleware');
 const router = express.Router();
 
 // 📌 Conversations
+router.get('/conversations/all/:userId', authenticateToken, chatService.getAllConversations);
 router.post('/conversations/private', authenticateToken, chatService.createOrGetPrivateConversation);
 router.post('/conversations/group', authenticateToken, chatService.createGroupConversation);
 router.post('/conversations/group/addMember', authenticateToken, chatService.addMemberToGroup);
@@ -24,5 +25,7 @@ router.post('/messages/pin', authenticateToken, chatService.pinMessage);
 router.post('/messages/unpin', authenticateToken, chatService.unpinMessage);
 router.get('/messages/pinned/:conversationId', authenticateToken, chatService.getPinnedMessages);
 router.post('/messages/revoke', authenticateToken, chatService.revokeMessage);
+
+router.put('/conversations/group/update/:conversationId', authenticateToken, chatService.updateGroupConversation); // Thêm route này
 
 module.exports = router;
