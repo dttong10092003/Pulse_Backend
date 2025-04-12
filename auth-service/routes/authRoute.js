@@ -15,6 +15,7 @@ const {
     verifyEmailOtp,
     loginGoogle,
     changePassword,
+    getPhoneNumber
 } = require('../controllers/authController');
 
 const router = express.Router();
@@ -58,5 +59,7 @@ router.post("/verify-email-otp", verifyEmailOtp);
 router.post('/login/google', loginGoogle); // dùng khi Login
 
 router.post('/change-password',changePassword );
+router.get('/phone', getPhoneNumber); // dùng khi Login
+
 
 module.exports = router;
