@@ -125,6 +125,29 @@ const changePassword = async (req, res) => {
   }
 }
 
+const getBatchUsernames = async (req, res) => {
+  try {
+    const { userIds } = req.body; // Nhận danh sách userIds từ request body
+
+    if (!Array.isArray(userIds)) {
+      return res.status(400).json({ message: "userIds must be an array" });
+    }
+
+    // Gửi request tới auth-service để lấy usernames
+    const response = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, { userIds }, {
+      headers: { Authorization: req.headers.authorization }
+    });
+
+    // Trả kết quả từ auth-service về cho client
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    console.error("❌ Error in API Gateway getBatchUsernames:", error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || error.message
+    });
+  }
+};
+
 module.exports = { checkUser, registerWithPhone, loginWithGoogleRegister, loginWithUsername, 
   checkEmailOrPhone, sendResetPasswordToEmail, 
-  resetPasswordWithToken, resetPasswordWithPhone, getMe, getUsernameById, sendEmailOtp, verifyEmailOtp, loginGoogle, changePassword };
+  resetPasswordWithToken, resetPasswordWithPhone, getMe, getUsernameById, sendEmailOtp, verifyEmailOtp, loginGoogle, changePassword,getBatchUsernames };

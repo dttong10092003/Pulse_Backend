@@ -76,8 +76,9 @@ const getUserDetailsByIds = async (req, res) => {
 // Tạo hàm lấy danh sách 10 người dùng trừ người dùng hiện tại và sắp xếp theo thời gian tạo
 const getTop10Users = async (req, res) => {
   try {
-    const excludeUserId = req.query.userId;
+    const excludeUserId = req.query.userId; // userId đang đăng nhập, sẽ loại trừ
 
+    // Gọi sang user-service
     const response = await axios.get(`${USER_SERVICE_URL}/users/top10-users`, {
       params: { excludeUserId },
     });
@@ -85,8 +86,9 @@ const getTop10Users = async (req, res) => {
     res.status(200).json(response.data);
   } catch (error) {
     console.error("❌ Error in API Gateway getTop10Users:", error.message);
+
     res.status(error.response?.status || 500).json({
-      error: error.response?.data?.message || error.message,
+      error: error.response?.data?.message || "Failed to fetch top 10 users",
     });
   }
 };

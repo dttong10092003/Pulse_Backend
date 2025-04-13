@@ -16,4 +16,5 @@ router.post("/send-email-otp", authService.sendEmailOtp);
 router.post("/verify-email-otp", authService.verifyEmailOtp);
 router.post("/login/google", authService.loginGoogle); // dùng khi Login
 router.post("/change-password", authService.changePassword);
+router.post("/batch-usernames", authService.getBatchUsernames); // Lấy danh sách username từ danh sách userId
 module.exports = router;

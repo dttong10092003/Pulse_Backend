@@ -15,6 +15,7 @@ const {
     verifyEmailOtp,
     loginGoogle,
     changePassword,
+    getBatchUsernames,
 } = require('../controllers/authController');
 
 const router = express.Router();
@@ -58,5 +59,6 @@ router.post("/verify-email-otp", verifyEmailOtp);
 router.post('/login/google', loginGoogle); // dùng khi Login
 
 router.post('/change-password',changePassword );
+router.post('/batch-usernames', getBatchUsernames);
 
 module.exports = router;
