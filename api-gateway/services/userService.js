@@ -76,7 +76,7 @@ const getUserDetailsByIds = async (req, res) => {
 // Tạo hàm lấy danh sách 10 người dùng trừ người dùng hiện tại và sắp xếp theo thời gian tạo
 const getTop10Users = async (req, res) => {
   try {
-    const excludeUserId = req.query.userId; // userId đang đăng nhập, sẽ loại trừ
+    const excludeUserId = req.query.excludeUserId; // userId đang đăng nhập, sẽ loại trừ
 
     // Gọi sang user-service
     const response = await axios.get(`${USER_SERVICE_URL}/users/top10-users`, {
@@ -92,5 +92,6 @@ const getTop10Users = async (req, res) => {
     });
   }
 };
+
 
 module.exports = { getUser, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users };

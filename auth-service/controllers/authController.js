@@ -505,7 +505,23 @@ const getBatchUsernames = async (req, res) => {
     res.status(200).json(result);
   } catch (error) {
     console.error("❌ Error in getBatchUsernames:", error.message);
-    res.status(500).json({ message: "Failed to fetch usernames" });
+    res.status(500).json({ message: "Failed to fetch usernames" })
+    }
+  };
+
+const getPhoneNumber = async (req, res) => {
+  const token = req.header("Authorization");
+  if (!token) return res.status(401).json({ message: "Missing token" });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId).select("phoneNumber");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    return res.status(200).json({ phoneNumber: user.phoneNumber });
+  } catch (err) {
+    console.error("getPhoneNumber error:", err.message);
+    return res.status(401).json({ message: "Invalid token" });
   }
 };
 
@@ -525,5 +541,6 @@ module.exports = {
   verifyEmailOtp,
   loginGoogle,
   changePassword,
-  getBatchUsernames,
+  getPhoneNumber,
+  getBatchUsernames
 };

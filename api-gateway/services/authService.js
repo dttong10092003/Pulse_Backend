@@ -125,6 +125,15 @@ const changePassword = async (req, res) => {
   }
 }
 
+const getPhoneNumber = async (req, res) => {
+  try {
+    const response = await axios.get(`${AUTH_SERVICE_URL}/auth/phone`, { headers: { Authorization: req.headers.authorization } });
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+}
+
 const getBatchUsernames = async (req, res) => {
   try {
     const { userIds } = req.body; // Nhận danh sách userIds từ request body
@@ -150,4 +159,4 @@ const getBatchUsernames = async (req, res) => {
 
 module.exports = { checkUser, registerWithPhone, loginWithGoogleRegister, loginWithUsername, 
   checkEmailOrPhone, sendResetPasswordToEmail, 
-  resetPasswordWithToken, resetPasswordWithPhone, getMe, getUsernameById, sendEmailOtp, verifyEmailOtp, loginGoogle, changePassword,getBatchUsernames };
+  resetPasswordWithToken, resetPasswordWithPhone, getMe, getUsernameById, sendEmailOtp, verifyEmailOtp, loginGoogle, changePassword,getBatchUsernames,getPhoneNumber };
