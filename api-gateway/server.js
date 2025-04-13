@@ -4,11 +4,11 @@ const cors = require('cors');
 
 dotenv.config();
 const app = express();
+app.use(express.urlencoded({ extended: true }));
 // app.use(express.json());
 app.use(express.json({ limit: '10mb' })); // test giới hạn base64, tuần sau chuyển qua cloud
 
 app.use(cors());
-
 
 // Import routes
 const authRoutes = require("./routes/authRoutes");

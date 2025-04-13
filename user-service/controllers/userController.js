@@ -1,5 +1,8 @@
 const jwt = require('jsonwebtoken');
-const UserDetail = require('../models/userDetail');
+const UserDetail = require('../models/userDetail'); // Import model UserDetail
+const mongoose = require('mongoose');
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL
+const axios = require("axios");
 // Hàm xác thực JWT và lấy userId
 const verifyToken = (req) => {
     const authHeader = req.headers.authorization;
@@ -36,30 +39,30 @@ const getUserById = async (req, res) => {
 // const getUserById = async (req, res) => {
 //     try {
 //       const userId = req.params.id;
-  
+
 //       // 1. Tìm UserDetail theo userId
 //       const userDetail = await UserDetail.findOne({ userId });
 //       if (!userDetail) {
 //         return res.status(404).json({ message: "User not found in UserDetail" });
 //       }
-  
+
 //       // 2. Gọi sang auth-service để lấy username
 //       const authServiceUrl = process.env.AUTH_SERVICE_URL || "http://auth-service:5000";
 //       let username = "";
-  
+
 //       try {
 //         const response = await axios.get(`${authServiceUrl}/auth/username/${userId}`);
 //         username = response.data.username || "";
 //       } catch (err) {
 //         console.error("Failed to fetch username from auth-service:", err.message);
 //       }
-  
+
 //       // 3. Gộp kết quả trả về: username + các trường từ UserDetail
 //       res.json({
 //         ...userDetail.toObject(),
 //         username,
 //       });
-  
+
 //     } catch (err) {
 //       console.error("getUserById error:", err.message);
 //       res.status(500).json({ message: err.message });
@@ -160,32 +163,32 @@ const checkEmailOrPhoneExists = async (req, res) => {
 
 const getUserByEmail = async (req, res) => {
     try {
-      const { email } = req.params;  // Lấy email từ params
-  
-      // Tìm người dùng trong UserDetail dựa trên email
-      const userDetail = await UserDetail.findOne({ email: email.trim() });
-  
-      if (!userDetail) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-  
-      // Trả về thông tin người dùng, bao gồm cả userId
-      res.json({
-        userId: userDetail.userId,  // Trả về userId cho auth-service để cập nhật mật khẩu
-        email: userDetail.email,
-        phoneNumber: userDetail.phoneNumber,
-        firstname: userDetail.firstname,
-        lastname: userDetail.lastname,
-        // Các thông tin khác nếu cần
-      });
+        const { email } = req.params;  // Lấy email từ params
+
+        // Tìm người dùng trong UserDetail dựa trên email
+        const userDetail = await UserDetail.findOne({ email: email.trim() });
+
+        if (!userDetail) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Trả về thông tin người dùng, bao gồm cả userId
+        res.json({
+            userId: userDetail.userId,  // Trả về userId cho auth-service để cập nhật mật khẩu
+            email: userDetail.email,
+            phoneNumber: userDetail.phoneNumber,
+            firstname: userDetail.firstname,
+            lastname: userDetail.lastname,
+            // Các thông tin khác nếu cần
+        });
     } catch (err) {
-      res.status(500).json({ message: err.message });
+        res.status(500).json({ message: err.message });
     }
-  };
+};
 
 
-  
-  // Tìm danh sách UserDetail từ danh sách userId
+
+// Tìm danh sách UserDetail từ danh sách userId
 const getUserDetailsByIds = async (req, res) => {
     try {
         const { userIds } = req.body; // Lấy danh sách userIds từ body
@@ -208,7 +211,62 @@ const getUserDetailsByIds = async (req, res) => {
     }
 };
 
+const getTop10Users = async (req, res) => {
+    try {
+        console.log("🌐 Full request URL:", req.originalUrl);
+        console.log("📥 req.query:", req.query);
+        const { excludeUserId } = req.query;
+        // Kiểm tra excludeUserId hợp lệ
+        let filter = {};
+        if (excludeUserId) {
+            filter = { userId: { $ne: new mongoose.Types.ObjectId(excludeUserId) } };
+        }
 
+        // Lấy danh sách UserDetail
+        const userDetails = await UserDetail.find(filter)
+            .sort({ createdAt: -1 })
+            .limit(10)
+            .lean();
+        if (!userDetails.length) {
+            return res.status(404).json({ message: "No users found" });
+        }
+        const userIds = userDetails.map((u) => u.userId);
 
+        console.log("🧩 Sample userId in DB:", userDetails[0]?.userId);
+        console.log("🧩 typeof userId in DB:", typeof userDetails[0]?.userId);
+        console.log("🚫 Exclude userId (from query):", excludeUserId);
+        console.log("🚫 typeof excludeUserId:", typeof excludeUserId);
 
-module.exports = { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds };
+        // Nếu userIds rỗng, return luôn
+        if (userIds.length === 0) {
+            return res.status(404).json({ message: "No user IDs found" });
+        }
+        // Gọi auth-service để lấy danh sách username theo userId
+        const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, {
+            userIds,
+        });
+        if (!authResponse.data) {
+            return res.status(500).json({ message: "Failed to fetch user details from auth-service" });
+        }
+        const userMap = authResponse.data; // { userId: username, ... }
+        // Gộp dữ liệu và trả về
+        const result = userDetails.map((detail) => ({
+            _id: detail.userId?.toString(),
+            firstname: detail.firstname,
+            lastname: detail.lastname,
+            avatar: detail.avatar,
+            username: userMap[detail.userId?.toString()] || "unknown",
+        }));
+        console.log("📤 Final user list sending to frontend:");
+        console.log(result.map(u => ({ id: u._id, username: u.username })));
+
+        console.log("🚫 Exclude userId:", excludeUserId);
+
+        res.status(200).json(result);
+    } catch (err) {
+        console.error("❌ Error in user-service getTop10Users:", err);
+        res.status(500).json({ message: "Failed to fetch top 10 users" });
+    }
+};
+
+module.exports = { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users };
