@@ -213,8 +213,6 @@ const getUserDetailsByIds = async (req, res) => {
 
 const getTop10Users = async (req, res) => {
     try {
-        console.log("🌐 Full request URL:", req.originalUrl);
-        console.log("📥 req.query:", req.query);
         const { excludeUserId } = req.query;
         // Kiểm tra excludeUserId hợp lệ
         let filter = {};
@@ -231,11 +229,6 @@ const getTop10Users = async (req, res) => {
             return res.status(404).json({ message: "No users found" });
         }
         const userIds = userDetails.map((u) => u.userId);
-
-        console.log("🧩 Sample userId in DB:", userDetails[0]?.userId);
-        console.log("🧩 typeof userId in DB:", typeof userDetails[0]?.userId);
-        console.log("🚫 Exclude userId (from query):", excludeUserId);
-        console.log("🚫 typeof excludeUserId:", typeof excludeUserId);
 
         // Nếu userIds rỗng, return luôn
         if (userIds.length === 0) {
@@ -257,11 +250,6 @@ const getTop10Users = async (req, res) => {
             avatar: detail.avatar,
             username: userMap[detail.userId?.toString()] || "unknown",
         }));
-        console.log("📤 Final user list sending to frontend:");
-        console.log(result.map(u => ({ id: u._id, username: u.username })));
-
-        console.log("🚫 Exclude userId:", excludeUserId);
-
         res.status(200).json(result);
     } catch (err) {
         console.error("❌ Error in user-service getTop10Users:", err);
