@@ -36,6 +36,8 @@ const getUserById = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+
 // const getUserById = async (req, res) => {
 //     try {
 //       const userId = req.params.id;
