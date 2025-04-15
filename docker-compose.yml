@@ -85,6 +85,7 @@ services:
       - MONGODB_URI=mongodb+srv://message:message@cluster0.pj1pmat.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - REDIS_URL=redis://redis:6379
       - USER_SERVICE_URL=http://user-service:5002
+      - CLOUDINARY_URL=cloudinary://725489854714717:FWkFjsjCpKtmrpzTCe8S-13cuf8@dh9otw5el
     depends_on:
       - mongo
       - redis
