@@ -8,6 +8,8 @@ const {
   getRecentConversations,
   checkUserOnline,
   searchConversations,
+  getAllConversations,
+  updateGroupConversation,
 } = require('../controllers/conversationController');
 
 const router = express.Router();
@@ -15,6 +17,7 @@ const router = express.Router();
 // 📌 Tạo hoặc lấy cuộc trò chuyện riêng tư (có tên hiển thị)
 router.post('/private', createOrGetPrivateConversation);
 
+router.get('/all/:userId', getAllConversations);
 // 📌 Tạo nhóm chat
 router.post('/group', createGroupConversation);
 
@@ -33,5 +36,8 @@ router.get('/online/:userId', checkUserOnline);
 
 // 📌 Tìm kiếm cuộc trò chuyện theo tên nhóm hoặc tên người còn lại
 router.get('/search', searchConversations);
+
+// 📌 Cập nhật thông tin nhóm trò chuyện (Đổi tên nhóm, avatar, ...)
+router.put('/group/update/:conversationId', updateGroupConversation)
 
 module.exports = router;

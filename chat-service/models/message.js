@@ -7,6 +7,7 @@ const MessageSchema = new mongoose.Schema({
   content: { type: String, required: true },
   isDeleted: { type: Boolean, default: false }, 
   timestamp: { type: Date, default: Date.now },
+  isPinned: { type: Boolean, default: false }, // Đánh dấu tin nhắn đã ghim
 });
 
 module.exports = mongoose.model('Message', MessageSchema);

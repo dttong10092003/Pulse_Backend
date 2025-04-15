@@ -2,8 +2,9 @@
 docker compose down
 docker compose up --build
 
-npm install nodemailer trong auth-service 
+npm install nodemailer trong auth-service
 
+npm install cloudinary multer trong user-service & post-service
 -> cd api-gateway: npm install cors
 
 like-service:
@@ -49,3 +50,8 @@ Xem tất cả bình luận của bài viết (GET):
 http://localhost:5004/comments/{postId}
 
 
+- Thêm hàm getUsernameById và getMe ở authCotnroller, sửa cái getUserById của userController
+
+- Bài post: Hiện bài post của cá nhân thì dễ. Nhưng hiện bài post của bạn bè đã follow -> phải test chức năng follow xong
+
+- Việc cần làm: trang MyProfile, bài post cá nhân

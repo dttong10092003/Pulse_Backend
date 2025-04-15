@@ -4,20 +4,12 @@ const cors = require('cors');
 
 dotenv.config();
 const app = express();
-app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+// app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // test giới hạn base64, tuần sau chuyển qua cloud
 
 app.use(cors());
 
-{/*
-  Cấu hình CORS trong backend: Trong file backend của bạn (có thể là app.js hoặc server.js), 
-  bạn cần cấu hình cors để cho phép tất cả các phương thức HTTP (bao gồm PUT) từ các miền khác.
-  */
-}
-// app.use(cors({
-//   origin: 'http://localhost:5173', // Đảm bảo chỉ định chính xác origin từ frontend
-//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-//   allowedHeaders: ['Content-Type', 'Authorization'],
-// }));
 // Import routes
 const authRoutes = require("./routes/authRoutes");
 const postRoutes = require("./routes/postRoutes");

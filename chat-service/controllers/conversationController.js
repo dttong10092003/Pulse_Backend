@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const Conversation = require('../models/conversation');
 const redisClient = require('../config/redisClient');
+const axios = require('axios');
+const Message = require('../models/message');
 
 // 📌 Kiểm tra trạng thái online của user
 exports.checkUserOnline = async (req, res) => {
@@ -14,9 +16,87 @@ exports.checkUserOnline = async (req, res) => {
   }
 };
 
+// 📌 Lấy tất cả cuộc trò chuyện của user
+exports.getAllConversations = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
+    const conversations = await Conversation.find({
+      members: { $in: [userObjectId] },  // Lọc các cuộc trò chuyện mà user tham gia
+    });
+
+    /////
+    if (!conversations.length) {
+      return res.json([]);
+    }
+
+    // 🔹 Tạo danh sách userId cần lấy thông tin
+    const userIds = [...new Set(conversations.flatMap(convo => convo.members.map(id => id.toString())))];
+
+    // 🔹 Gọi API từ User Service để lấy thông tin user
+    const userServiceUrl = process.env.USER_SERVICE_URL || 'http://user-service:5002';
+    const userResponse = await axios.post(`${userServiceUrl}/users/user-details-by-ids`, { userIds });
+
+    // 🔍 Kiểm tra dữ liệu trả về từ User Service
+    console.log('🟢 User Service Response:', JSON.stringify(userResponse.data, null, 2));
+
+    if (!userResponse.data || !Array.isArray(userResponse.data)) {
+      console.error('❌ Lỗi khi gọi API User Service:', userResponse.data);
+      return res.status(500).json({ error: 'Không thể lấy thông tin user' });
+    }
+
+    // 🔹 Chuyển danh sách user thành object để tra cứu nhanh
+    const userMap = userResponse.data.reduce((acc, user) => {
+      acc[user.userId] = { 
+        userId: user.userId,
+        name: `${user.firstname} ${user.lastname}`.trim() || 'Unknown',
+        avatar: user.avatar || '' };
+      return acc;
+    }, {});
+
+    // 🔹 Gán thông tin members và lấy tin nhắn
+    const updatedConversations = await Promise.all(conversations.map(async (conversation) => {
+      conversation = conversation.toObject(); // Chuyển Mongoose document thành object
+
+      // Thay thế members từ ObjectId sang object chứa thông tin user
+      conversation.members = conversation.members.map(userId => userMap[userId.toString()] || { userId, name: 'Unknown', avatar: '' });
+
+      // Lấy tin nhắn gần nhất
+      const messages = await Message.find({ conversationId: conversation._id })
+        .sort({ timestamp: 1 });
+
+      conversation.messages = messages.map(msg => {
+        const senderInfo = userMap[msg.senderId.toString()] || { name: 'Unknown', avatar: '' };
+
+        return {
+        senderId: msg.senderId,
+        name: senderInfo.name,
+        content: msg.content,
+        type: msg.type,
+        timestamp: msg.timestamp,
+        isSentByUser: msg.senderId.toString() === userId,
+        senderAvatar: senderInfo.avatar,
+        isDeleted: msg.isDeleted || false,
+        isPinned: msg.isPinned || false
+        };
+      });
+
+      return conversation;
+    }));
+
+    res.json(updatedConversations);
+  } catch (error) {
+    console.error('❌ Lỗi trong getAllConversations:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
 exports.createOrGetPrivateConversation = async (req, res) => {
   try {
-    const { user1, user2, user2Name } = req.body;
+    const { user1, user2} = req.body;
     const conversationId = new mongoose.Types.ObjectId();
 
     let conversation = await Conversation.findOne({ 
@@ -25,12 +105,10 @@ exports.createOrGetPrivateConversation = async (req, res) => {
     });
 
     if (!conversation) {
-      // ✅ Đặt groupName = Tên người còn lại
       conversation = new Conversation({
         conversationId, 
         members: [user1, user2], 
-        isGroup: false, 
-        groupName: user2Name
+        isGroup: false,
       });
       await conversation.save();
     }
@@ -44,14 +122,15 @@ exports.createOrGetPrivateConversation = async (req, res) => {
 // 📌 Tạo nhóm chat
 exports.createGroupConversation = async (req, res) => {
   try {
-    const { groupName, members, adminId } = req.body;
+    const { groupName, members, adminId, avatar } = req.body;
 
     const newGroup = new Conversation({
       conversationId: new mongoose.Types.ObjectId(),
       groupName,
       members,
       isGroup: true,
-      adminId
+      adminId,
+      avatar: avatar || '', 
     });
 
     await newGroup.save();
@@ -202,6 +281,35 @@ exports.searchConversations = async (req, res) => {
 
     // ✅ Trả về danh sách chat phù hợp với keyword
     res.json([...groupChats, ...formattedPrivateChats]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 📌 Cập nhật thông tin nhóm (đổi tên, avatar, ...)
+exports.updateGroupConversation = async (req, res) => {
+  try {
+    const { conversationId } = req.params; // Lấy ID cuộc trò chuyện cần cập nhật
+    const { groupName, avatar } = req.body; // Các thông tin cần cập nhật
+
+    // Tìm cuộc trò chuyện theo ID và kiểm tra xem nó có phải nhóm không
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ message: "Cuộc trò chuyện không tồn tại" });
+    }
+
+    if (!conversation.isGroup) {
+      return res.status(400).json({ message: "Không thể thay đổi thông tin cuộc trò chuyện riêng tư" });
+    }
+
+    // Cập nhật thông tin nhóm (groupName và avatar)
+    if (groupName) conversation.groupName = groupName;
+    if (avatar !== undefined) conversation.avatar = avatar; // Kiểm tra xem có avatar mới không
+
+    // Lưu lại những thay đổi
+    await conversation.save();
+
+    res.status(200).json({ message: "Thông tin nhóm đã được cập nhật", conversation });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

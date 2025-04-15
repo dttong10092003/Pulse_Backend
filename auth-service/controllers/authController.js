@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const nodemailer = require("nodemailer");
 const axios = require("axios");
+
 // Kiểm tra số điện thoại hoặc email đã tồn tại chưa
 const checkUserExists = async (req, res) => {
   try {
@@ -11,7 +12,7 @@ const checkUserExists = async (req, res) => {
     const existingUser = await User.findOne({ $or: [{ phoneNumber }, { username }] });
 
     if (existingUser) {
-      return res.status(400).json({ message: 'Phone number or Email already in use' });
+      return res.status(400).json({ message: 'Phone number or Username already in use' });
     }
     return res.status(200).json({ message: 'Available for registration' });
   } catch (err) {
@@ -42,51 +43,75 @@ const registerUserWithPhone = async (req, res) => {
   }
 };
 
-// Đăng ký / Đăng nhập bằng Google OAuth2
-// const handleGoogleLogin = async (req, res) => {
-//     try {
-//         const { email, googleId } = req.body;
-
-//         let user = await User.findOne({ email });
-
-//         if (user) {
-//             // Nếu user đã có tài khoản, đăng nhập luôn
-//             const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-//             return res.status(200).json({ token, user });
-//         }
-
-//         // Nếu user chưa có tài khoản, tạo mới
-//         user = new User({ email, googleId, isVerified: false });
-//         await user.save();
-
-//         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-//         res.status(201).json({ token, user, message: "Please enter phone number to verify" });
-//     } catch (err) {
-//         res.status(500).json({ message: err.message });
-//     }
-// };
-const handleGoogleLogin = async (req, res) => {
+// HÀM GG Xử Lý login register
+const handleGoogleLoginRegister = async (req, res) => {
   try {
     const { email, googleId } = req.body;
 
+    //  1. Kiểm tra trong auth-service
     let user = await User.findOne({ email });
-
     if (user) {
-      // Nếu user đã có tài khoản, kiểm tra `isVerified`
-      const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-      return res.status(200).json({ token, user, isVerified: user.isVerified });
+      return res.status(409).json({ message: "Email already registered", status: 409 });
     }
 
-    // Nếu user chưa có tài khoản, tạo mới
-    user = new User({ email, googleId, isVerified: false });
+    //  2. Kiểm tra trong user-service
+    const userServiceUrl = process.env.USER_SERVICE_URL || "http://user-service:5002";
+    const checkRes = await axios.post(`${userServiceUrl}/users/check-email-phone`, { email });
+
+    if (checkRes.data.exists) {
+      return res.status(409).json({ message: "Email already registered", status: 409 });
+    }
+
+    //  3. Tạo mới nếu chưa có ở đâu cả
+    user = new User({
+      email,
+      googleId,
+      username: email.split("@")[0],
+      isVerified: false
+    });
     await user.save();
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
     res.status(201).json({ token, user, isVerified: false });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Google login error:", err.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+//  Login bằng Google KHÔNG kiểm tra email tồn tại
+const loginGoogle = async (req, res) => {
+  try {
+    const { email, googleId } = req.body;
+
+    // Tìm user theo email + googleId
+    const user = await User.findOne({ email, googleId });
+    if (!user) {
+      return res.status(404).json({ message: 'Google account not found. Please register first.' });
+    }
+
+    const userServiceUrl = process.env.USER_SERVICE_URL || "http://user-service:5002";
+    let hasUserDetail = false;
+
+    try {
+      const detailRes = await axios.get(`${userServiceUrl}/users/${user._id}`);
+      hasUserDetail = !!(detailRes.data?.firstname && detailRes.data?.lastname);
+    } catch (err) {
+      console.warn("User-service error:", err.message);
+    }
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    res.status(200).json({
+      token,
+      user,
+      isVerified: hasUserDetail
+    });
+  } catch (err) {
+    console.error("Google login error:", err.message);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
@@ -107,7 +132,7 @@ const loginUser = async (req, res) => {
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    res.json({ token });
+    res.json({user, token });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -296,16 +321,227 @@ const resetPasswordWithPhone = async (req, res) => {
     res.status(500).json({ message: 'Server error while resetting password via phone' });
   }
 };
+// Lấy username theo userId
+const getUsernameById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('username');
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
+    res.json({ username: user.username });
+  } catch (err) {
+    console.error("Get username error:", err.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+const getMe = async (req, res) => {
+  const authHeader = req.header("Authorization");
+  if (!authHeader) return res.status(401).json({ message: "Missing token" });
+
+  const token = authHeader.startsWith('Bearer ')
+  ? authHeader.replace('Bearer ', '')
+  : authHeader;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Gọi user-service để lấy thông tin chi tiết
+    const userServiceUrl = process.env.USER_SERVICE_URL || "http://user-service:5002";
+    const detailRes = await axios.get(`${userServiceUrl}/users/${user._id}`);
+
+    const userDetail = detailRes.data;
+    userDetail.username = user.username;
+
+
+    res.status(200).json({ user, userDetail });
+  } catch (err) {
+    console.error("getMe error:", err.message);
+    res.status(401).json({ message: "Invalid token" });
+  }
+};
+const otpStore = {}; // Dùng tạm bộ nhớ RAM, có thể thay bằng Redis
+
+const sendEmailOtp = async (req, res) => {
+  const { email } = req.body;
+
+  // Validate định dạng email
+  if (!email || !/.+@.+\..+/.test(email)) {
+    return res.status(400).json({ message: "Invalid email format" });
+  }
+
+  try {
+    // Kiểm tra email đã tồn tại trong bảng User của auth-service chưa
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already exists in User" });
+    }
+
+    //  Gọi API sang user-service để kiểm tra email trong UserDetail
+    const userServiceUrl = process.env.USER_SERVICE_URL || "http://user-service:5002";
+    const response = await axios.post(`${userServiceUrl}/users/check-email-phone`, { email });
+
+    if (response.data.exists) {
+      return res.status(400).json({ message: "Email already exists in UserDetail" });
+    }
+
+    // Tạo mã OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    otpStore[email] = otpCode;
+
+    // Gửi OTP qua email
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: "tinphan309z@gmail.com",
+        pass: "plxbmhiqvijtliqn",
+      },
+    });
+
+    await transporter.sendMail({
+      from: '"PULSE OTP" <tinphan309z@gmail.com>',
+      to: email,
+      subject: "🔐 Your PULSE Email Verification Code",
+      html: `
+        <div style="font-family: 'Arial', sans-serif; background-color: #f9f9f9; padding: 20px; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="background-color: #4CAF50; padding: 20px; text-align: center; color: white;">
+              <h1 style="margin: 0; font-size: 24px;">PULSE</h1>
+              <p style="margin: 0; font-size: 16px;">Secure Email Verification</p>
+            </div>
+            <div style="padding: 20px;">
+              <h2 style="color: #333; font-size: 22px;">Your OTP Code: <span style="color: #4CAF50;">${otpCode}</span></h2>
+              <p style="font-size: 16px; line-height: 1.5; margin-top: 20px;">Hi there,</p>
+              <p style="font-size: 16px; line-height: 1.5;">Please use the 6-digit code above to verify your email address. This code is valid for the next <strong>5 minutes</strong>.</p>
+              <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">If you did not request this code, please ignore this email or contact support.</p>
+            </div>
+            <div style="background-color: #f1f1f1; padding: 10px; text-align: center; font-size: 14px; color: #666;">
+              <p style="margin: 0;">Need help? <a href="mailto:support@pulse.com" style="color: #4CAF50; text-decoration: none;">Contact Support</a></p>
+            </div>
+          </div>
+        </div>
+      `
+    });
+
+    res.status(200).json({ message: "OTP sent to email" });
+
+  } catch (err) {
+    console.error("sendEmailOtp error:", err.message);
+    res.status(500).json({ message: "Failed to send OTP email" });
+  }
+};
+
+const verifyEmailOtp = async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return res.status(400).json({ message: "Email and OTP are required" });
+  }
+
+  if (otpStore[email] === otp) {
+    delete otpStore[email]; // Xác thực xong thì xóa
+    return res.status(200).json({ message: "OTP verified successfully" });
+  } else {
+    return res.status(400).json({ message: "Invalid OTP" });
+  }
+};
+const changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const token = req.header("Authorization");
+
+    if (!token) return res.status(401).json({ message: "Missing token" });
+
+    // Xác thực token
+    const decoded = jwt.verify(
+      token.startsWith("Bearer ") ? token.slice(7) : token,
+      process.env.JWT_SECRET
+    );
+
+    const user = await User.findById(decoded.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Nếu user đăng nhập bằng Google thì không có mật khẩu để đổi
+    if (!user.password) {
+      return res.status(400).json({ message: "This account doesn't use password login" });
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Old password is incorrect" });
+    }
+
+    const hashedNew = await bcrypt.hash(newPassword, 10);
+    user.password = hashedNew;
+    await user.save();
+
+    return res.status(200).json({ message: "Password changed successfully" });
+  } catch (err) {
+    console.error("Change password error:", err.message);
+    return res.status(500).json({ message: "Server error while changing password" });
+  }
+};
+
+const getBatchUsernames = async (req, res) => {
+  try {
+    const { userIds } = req.body;
+
+    // Kiểm tra nếu userIds là một mảng
+    if (!Array.isArray(userIds)) {
+      return res.status(400).json({ message: "userIds must be an array" });
+    }
+
+    // Tìm kiếm username trong User model dựa vào userIds
+    const users = await User.find({ _id: { $in: userIds } }).select("username");
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: "No users found" });
+    }
+
+    const result = {};
+    users.forEach((user) => {
+      result[user._id.toString()] = user.username;
+    });
+
+    // Trả kết quả ra cho client
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("❌ Error in getBatchUsernames:", error.message);
+    res.status(500).json({ message: "Failed to fetch usernames" })
+    }
+  };
+
+const getPhoneNumber = async (req, res) => {
+  const token = req.header("Authorization");
+  if (!token) return res.status(401).json({ message: "Missing token" });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId).select("phoneNumber");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    return res.status(200).json({ phoneNumber: user.phoneNumber });
+  } catch (err) {
+    console.error("getPhoneNumber error:", err.message);
+    return res.status(401).json({ message: "Invalid token" });
+  }
+};
 
 module.exports = {
   checkUserExists,
   registerUserWithPhone,
-  handleGoogleLogin,
+  handleGoogleLoginRegister,
   loginUser,
   authenticateToken,
   checkEmailOrPhoneExists,
   sendResetPasswordToEmail,
   resetPasswordWithToken,
   resetPasswordWithPhone,
+  getMe,
+  getUsernameById,
+  sendEmailOtp,
+  verifyEmailOtp,
+  loginGoogle,
+  changePassword,
+  getPhoneNumber,
+  getBatchUsernames
 };

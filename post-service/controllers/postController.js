@@ -1,14 +1,16 @@
 const Post = require('../models/post');
 const jwt = require('jsonwebtoken');
+const { uploadToCloudinary, deleteFromCloudinaryByUrl } = require('../utils/cloudinary');
+
 // Hàm xác thực JWT và lấy userId
 const verifyToken = (req) => {
     const authHeader = req.headers.authorization;
     console.log("🔹 Headers received in post-service:", req.headers); // Debug headers
-    
+
     if (!authHeader) {
         throw { status: 401, message: 'Unauthorized: No token provided' };
     }
-    
+
     const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
     console.log("🔹 Extracted token in post-service:", token); // Debug token
 
@@ -28,11 +30,27 @@ const createPost = async (req, res) => {
         const userId = verifyToken(req);
         const { content, media, tags } = req.body;
 
-        const newPost = new Post({ userId, content, media, tags });
+        let uploadedMedia = [];
+
+        if (media && Array.isArray(media) && media.length > 0) {
+            // Duyệt và upload từng ảnh/video
+            uploadedMedia = await Promise.all(
+                media.map((fileBase64) => uploadToCloudinary(fileBase64, 'posts'))
+            );
+        }
+
+        const newPost = new Post({
+            userId,
+            content,
+            media: uploadedMedia,
+            tags
+        });
+
         await newPost.save();
 
         res.status(201).json(newPost);
     } catch (err) {
+        console.error("❌ createPost error:", err);
         res.status(err.status || 500).json({ message: err.message });
     }
 };
@@ -40,29 +58,38 @@ const createPost = async (req, res) => {
 // Xóa bài viết (Yêu cầu đăng nhập & chỉ chủ sở hữu mới xóa được)
 const deletePost = async (req, res) => {
     try {
-        const userId = verifyToken(req);
-
-        const post = await Post.findById(req.params.id);
-        if (!post) {
-            return res.status(404).json({ message: 'Post not found' });
-        }
-
-        // Kiểm tra quyền sở hữu bài viết
-        if (post.userId.toString() !== userId) {
-            return res.status(403).json({ message: 'Forbidden: You can only delete your own posts' });
-        }
-
-        await post.deleteOne();
-        res.json({ message: 'Post deleted successfully' });
+      const userId = verifyToken(req);
+  
+      const post = await Post.findById(req.params.id);
+      if (!post) return res.status(404).json({ message: 'Post not found' });
+  
+      if (post.userId.toString() !== userId) {
+        return res.status(403).json({ message: 'Forbidden: You can only delete your own posts' });
+      }
+  
+      // ✅ Gọi xoá từng media kèm log
+      if (Array.isArray(post.media) && post.media.length > 0) {
+        await Promise.all(
+          post.media.map(async (fileUrl) => {
+            console.log("🧹 Đang xoá media:", fileUrl);
+            await deleteFromCloudinaryByUrl(fileUrl);
+          })
+        );
+      }
+  
+      await post.deleteOne();
+  
+      res.json({ message: 'Post and associated media deleted successfully' });
     } catch (err) {
-        res.status(err.status || 500).json({ message: err.message });
+      console.error("❌ Error deleting post:", err);
+      res.status(err.status || 500).json({ message: err.message });
     }
-};
+  };
 
 // Lấy tất cả bài viết (Không yêu cầu đăng nhập)
 const getAllPosts = async (req, res) => {
     try {
-        const posts = await Post.find(); 
+        const posts = await Post.find();
         res.json(posts);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -81,5 +108,18 @@ const getPostById = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+// Lấy bài viết theo userId (Yêu cầu đăng nhập)
+const getPostsByUser = async (req, res) => {
+    try {
+        const userId = req.query.userId;
+        if (!userId) {
+            return res.status(400).json({ message: "Missing userId" });
+        }
 
-module.exports = { createPost, getAllPosts, getPostById, deletePost };
+        const posts = await Post.find({ userId }).sort({ createdAt: -1 });
+        res.json(posts);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+module.exports = { createPost, getAllPosts, getPostById, deletePost, getPostsByUser };
