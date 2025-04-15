@@ -13,6 +13,7 @@ const getRecentNotifications = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+// test óahjd
 
 // ✅ Lấy tất cả thông báo
 const getAllNotifications = async (req, res) => {
