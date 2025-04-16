@@ -1,0 +1,6 @@
+test hàm get all 
+
+http://localhost:5007/noti/ListNotification?userId=67f689b651a665e3f26bca47
+
+http://localhost:3000/noti/all?userId=67f689b651a665e3f26bca47
+
