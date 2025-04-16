@@ -1,5 +1,6 @@
 const Message = require('../models/message');
 const redisClient = require('../config/redisClient');
+const { uploadToCloudinary } = require('../utils/cloudinary');
 
 // 📌 Lấy 5 tin nhắn gần nhất là hình ảnh
 exports.getRecentImages = async (req, res) => {
@@ -142,11 +143,20 @@ exports.unpinMessage = async (req, res) => {
 };
 
 // 📌 Gửi tin nhắn và cập nhật Redis
-exports.sendMessage = async (req, res) => {
+exports.sendMessage = async ({ conversationId, senderId, type, content, timestamp, isDeleted, isPinned, fileName, fileType }) => {
   try {
-    const { conversationId, senderId, type, content } = req.body;
+    let fileUrl = content;
 
-    const newMessage = new Message({ conversationId, senderId, type, content });
+    if(type === 'image' || type === 'file' || type === 'video' || type === 'audio'){
+      if (fileName && fileType) {
+        const cloudinaryResponse = await uploadToCloudinary(content, "chat_files");
+        fileUrl = cloudinaryResponse;
+      } else {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+    }
+
+    const newMessage = new Message({ conversationId, senderId, type, content: fileUrl, timestamp, isDeleted, isPinned });
     await newMessage.save();
 
     // Cập nhật Redis: Xóa cache tin nhắn cũ để tải lại tin mới nhất
@@ -155,11 +165,45 @@ exports.sendMessage = async (req, res) => {
     // Cập nhật danh sách cuộc trò chuyện gần đây của user
     await redisClient.zAdd(`recentChats:${senderId}`, { score: Date.now(), value: conversationId });
 
-    res.status(201).json(newMessage);
+    return newMessage;
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error sending message:', error);
+    // res.status(500).json({ error: error.message });
+    throw new Error(error.message);
   }
 };
+
+// // 📌 Gửi tin nhắn và cập nhật Redis
+// exports.sendMessage = async (req, res) => {
+//   try {
+//     const { conversationId, senderId, type, content, timestamp, isDeleted, isPinned } = req.body;
+//     let fileUrl = content;
+
+//     if(type === 'image' || type === 'file' || type === 'video' || type === 'audio'){
+//       const file = req.files?.file;
+//       if(file){
+//         const cloudinaryResponse = await uploadToCloudinary(file.data, "chat_files");
+//         fileUrl = cloudinaryResponse;
+//       } else {
+//         return res.status(400).json({ message: "No file uploaded" });
+//       }
+//     }
+
+//     const newMessage = new Message({ conversationId, senderId, type, content: fileUrl, timestamp, isDeleted, isPinned });
+//     await newMessage.save();
+
+//     // Cập nhật Redis: Xóa cache tin nhắn cũ để tải lại tin mới nhất
+//     await redisClient.del(`messages:${conversationId}`);
+
+//     // Cập nhật danh sách cuộc trò chuyện gần đây của user
+//     await redisClient.zAdd(`recentChats:${senderId}`, { score: Date.now(), value: conversationId });
+
+//     res.status(201).json(newMessage);
+//   } catch (error) {
+//     console.error('Error sending message:', error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
 
 // 📌 Lấy tin nhắn (tận dụng Redis cache)
 exports.getMessages = async (req, res) => {

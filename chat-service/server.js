@@ -7,7 +7,8 @@ require('dotenv').config();
 const messageRoutes = require('./routes/messageRoute');
 const conversationRoutes = require('./routes/conversationRoute');
 const redisClient = require('./config/redisClient');
-const Message = require('./models/message');
+// const Message = require('./models/message');
+const { sendMessage } = require('./controllers/messageController');
 
 const app = express();
 const server = http.createServer(app);
@@ -18,10 +19,7 @@ const io = socketIo(server, {
 app.use(express.json());
 
 // Kết nối MongoDB
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => console.log('✅ MongoDB connected'))
+mongoose.connect(process.env.MONGODB_URI).then(() => console.log('✅ MongoDB connected'))
   .catch(err => console.error(err));
 
 app.use('/messages', messageRoutes);
@@ -42,16 +40,25 @@ io.on('connection', (socket) => {
     console.log(`📌 User joined room: ${conversationId}`);
   });
 
-  socket.on('sendMessage', async ({ conversationId, senderId, type, content, name, senderAvatar }) => {
+  socket.on('sendMessage', async ({ conversationId, senderId, type, content, name, senderAvatar, timestamp, isDeleted, isPinned, fileName, fileType }) => {
     console.log('Received message from client:', content);
 
-    const newMessage = new Message({ conversationId, senderId, type, content, timestamp: new Date().toISOString(), isDeleted: false, isPinned: false });
+    // const newMessage = new Message({ conversationId, senderId, type, content, timestamp, isDeleted, isPinned });
 
     try {
-      await newMessage.save();  // Lưu tin nhắn vào MongoDB
-
-      // Xóa cache của Redis nếu có tin nhắn mới
-      await redisClient.del(`messages:${conversationId}`);
+      // Gọi hàm sendMessage từ controller để xử lý và lưu tin nhắn
+      // const newMessage = await sendMessage({ conversationId, senderId, type, content, timestamp, isDeleted, isPinned });
+      const newMessage = await sendMessage({
+        conversationId, 
+        senderId, 
+        type, 
+        content, 
+        timestamp, 
+        isDeleted, 
+        isPinned, 
+        fileName,
+        fileType,
+      });
 
       // Gửi tin nhắn tới các client trong phòng chat tương ứng
       // io.to(conversationId).emit('newMessage', newMessage);
