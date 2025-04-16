@@ -14,6 +14,8 @@ services:
       - CMT_SERVICE_URL=http://cmt-service:5004
       - CHAT_SERVICE_URL=http://chat-service:5005
       - FOLLOW_SERVICE_URL=http://follow-service:5006
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5007
+
   auth-service:
     build:
       context: ./auth-service # Chỉ ra nơi có Dockerfile của auth-service
@@ -102,6 +104,18 @@ services:
       - mongo
       - auth-service
 
+  notification-service: 
+    build:
+      context: ./notification-service
+    ports:
+      - "5007:5007"
+    environment:
+      - MONGODB_URI=mongodb+srv://thanhnam:thanhnam@cluster01.b0n1v.mongodb.net/?retryWrites=true&w=majority&appName=Cluster01
+      - JWT_SECRET=mySuperSecretKey12345!@#123
+    depends_on:
+      - mongo
+      - auth-service
+
   redis: 
     image: redis
     ports:
@@ -111,3 +125,8 @@ services:
     image: mongo
     ports:
       - "27017:27017"
+  
+  signaling-service:
+    build: ./signaling-service
+    ports:
+       - "8000:8000"
