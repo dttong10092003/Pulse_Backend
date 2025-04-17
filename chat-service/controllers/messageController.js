@@ -142,17 +142,32 @@ exports.unpinMessage = async (req, res) => {
   }
 };
 
+const parseBase64 = (base64String) => {
+  const matches = base64String.match(/^data:(.+);base64,(.+)$/);
+  if (!matches || matches.length !== 3) {
+    throw new Error('Invalid base64 string');
+  }
+
+  const mimeType = matches[1]; // ví dụ: image/png
+  const base64Data = matches[2]; // phần sau dấu phẩy
+
+  const buffer = Buffer.from(base64Data, 'base64');
+  return { mimeType, buffer };
+};
+
+
 // 📌 Gửi tin nhắn và cập nhật Redis
 exports.sendMessage = async ({ conversationId, senderId, type, content, timestamp, isDeleted, isPinned, fileName, fileType }) => {
   try {
     let fileUrl = content;
 
-    if(type === 'image' || type === 'file' || type === 'video' || type === 'audio'){
-      if (fileName && fileType) {
-        const cloudinaryResponse = await uploadToCloudinary(content, "chat_files");
+    if(['image', 'video', 'audio', 'file'].includes(type)){
+      if (fileName && fileType && content.startsWith('data:')) {
+        const { buffer } = parseBase64(content);
+        const cloudinaryResponse = await uploadToCloudinary(buffer, fileName, "chat_files");
         fileUrl = cloudinaryResponse;
       } else {
-        return res.status(400).json({ message: "No file uploaded" });
+        throw new Error("Invalid file upload");
       }
     }
 
