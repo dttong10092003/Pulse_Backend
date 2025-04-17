@@ -3,6 +3,8 @@ const UserDetail = require('../models/userDetail'); // Import model UserDetail
 const mongoose = require('mongoose');
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL
 const axios = require("axios");
+const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
+
 // Hàm xác thực JWT và lấy userId
 const verifyToken = (req) => {
     const authHeader = req.headers.authorization;
@@ -129,8 +131,35 @@ const updateUser = async (req, res) => {
 
         user.address = address || user.address;
         user.bio = bio || user.bio;
-        user.avatar = avatar || user.avatar;
-        user.backgroundAvatar = backgroundAvatar || user.backgroundAvatar;
+        // Tạo danh sách các tác vụ xử lý song song
+        const promises = [];
+
+        // Avatar
+        if (avatar?.startsWith("data:image/")) {
+            if (user.avatar?.includes("res.cloudinary.com") && !user.avatar.includes("mac-dinh")) {
+                promises.push(deleteFromCloudinary(user.avatar));
+            }
+            promises.push(
+                uploadToCloudinary(avatar, 'avatars').then((url) => {
+                    user.avatar = url;
+                })
+            );
+        }
+
+        // Background
+        if (backgroundAvatar?.startsWith("data:image/")) {
+            if (user.backgroundAvatar?.includes("res.cloudinary.com") && !user.backgroundAvatar.includes("mac-dinh")) {
+                promises.push(deleteFromCloudinary(user.backgroundAvatar));
+            }
+            promises.push(
+                uploadToCloudinary(backgroundAvatar, 'backgrounds').then((url) => {
+                    user.backgroundAvatar = url;
+                })
+            );
+        }
+
+        // Thực hiện tất cả thao tác xoá và upload ảnh song song
+        await Promise.all(promises);
 
         await user.save();
         res.json({ message: 'User updated successfully', user });
@@ -259,4 +288,34 @@ const getTop10Users = async (req, res) => {
     }
 };
 
-module.exports = { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users };
+const getUserDetails = async (req, res) => {
+    const { userId } = req.params;
+  
+    if (!userId) {
+      return res.status(400).json({ message: 'Missing userId param.' });
+    }
+  
+    try {
+      const user = await User.findById(userId).select('firstname lastname avatar');
+  
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      return res.status(200).json({
+        message: 'User details retrieved successfully.',
+        data: {
+          firstname: user.firstname,
+          lastname: user.lastname,
+          avatar: user.avatar,
+        }
+      });
+    } catch (error) {
+      console.error("Error in getUserDetails:", error);
+      return res.status(500).json({
+        message: 'Internal server error.',
+        error: error.message
+      });
+    }
+  };
+module.exports = { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users,getUserDetails };

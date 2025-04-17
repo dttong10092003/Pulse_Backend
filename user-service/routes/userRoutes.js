@@ -1,5 +1,5 @@
 const express = require('express');
-const { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds,getTop10Users } = require('../controllers/userController');
+const { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds,getTop10Users, getUserDetails } = require('../controllers/userController');
 
 const router = express.Router();
 
@@ -13,8 +13,7 @@ router.get('/user-details/:email', getUserByEmail);
 
 // Thêm route mới để lấy danh sách UserDetail từ danh sách userId
 router.post('/user-details-by-ids', getUserDetailsByIds);
-
-// Thêm route mới để lấy danh sách 10 người dùng
+router.get('/user-details/:userId', getUserDetails); // Lấy thông tin người dùng qua userId
 
 
 module.exports = router;

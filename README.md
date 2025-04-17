@@ -4,6 +4,7 @@ docker compose up --build
 
 npm install nodemailer trong auth-service
 
+npm install cloudinary multer trong user-service & post-service
 -> cd api-gateway: npm install cors
 
 like-service:
