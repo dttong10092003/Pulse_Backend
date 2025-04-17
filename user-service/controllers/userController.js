@@ -38,6 +38,8 @@ const getUserById = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+
 // const getUserById = async (req, res) => {
 //     try {
 //       const userId = req.params.id;
@@ -242,8 +244,6 @@ const getUserDetailsByIds = async (req, res) => {
 
 const getTop10Users = async (req, res) => {
     try {
-        console.log("🌐 Full request URL:", req.originalUrl);
-        console.log("📥 req.query:", req.query);
         const { excludeUserId } = req.query;
         // Kiểm tra excludeUserId hợp lệ
         let filter = {};
@@ -260,11 +260,6 @@ const getTop10Users = async (req, res) => {
             return res.status(404).json({ message: "No users found" });
         }
         const userIds = userDetails.map((u) => u.userId);
-
-        console.log("🧩 Sample userId in DB:", userDetails[0]?.userId);
-        console.log("🧩 typeof userId in DB:", typeof userDetails[0]?.userId);
-        console.log("🚫 Exclude userId (from query):", excludeUserId);
-        console.log("🚫 typeof excludeUserId:", typeof excludeUserId);
 
         // Nếu userIds rỗng, return luôn
         if (userIds.length === 0) {
@@ -286,11 +281,6 @@ const getTop10Users = async (req, res) => {
             avatar: detail.avatar,
             username: userMap[detail.userId?.toString()] || "unknown",
         }));
-        console.log("📤 Final user list sending to frontend:");
-        console.log(result.map(u => ({ id: u._id, username: u.username })));
-
-        console.log("🚫 Exclude userId:", excludeUserId);
-
         res.status(200).json(result);
     } catch (err) {
         console.error("❌ Error in user-service getTop10Users:", err);
@@ -298,4 +288,35 @@ const getTop10Users = async (req, res) => {
     }
 };
 
-module.exports = { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users };
+const getUserDetails = async (req, res) => {
+    const { userId } = req.params;
+  
+    if (!userId) {
+      return res.status(400).json({ message: 'Missing userId param.' });
+    }
+  
+    try {
+      const user = await UserDetail.findOne({ userId }).select('firstname lastname avatar');
+  
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      return res.status(200).json({
+        message: 'User details retrieved successfully.',
+        data: {
+          firstname: user.firstname,
+          lastname: user.lastname,
+          avatar: user.avatar,
+        }
+      });
+    } catch (error) {
+      console.error("Error in getUserDetails:", error);
+      return res.status(500).json({
+        message: 'Internal server error.',
+        error: error.message
+      });
+    }
+  };
+
+module.exports = { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users,getUserDetails };

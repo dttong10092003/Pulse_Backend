@@ -103,7 +103,6 @@ services:
     depends_on:
       - mongo
       - auth-service
-
   notification-service: 
     build:
       context: ./notification-service
@@ -115,7 +114,6 @@ services:
     depends_on:
       - mongo
       - auth-service
-
   redis: 
     image: redis
     ports:
@@ -125,8 +123,4 @@ services:
     image: mongo
     ports:
       - "27017:27017"
-  
-  signaling-service:
-    build: ./signaling-service
-    ports:
-       - "8000:8000"
+
