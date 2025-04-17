@@ -6,7 +6,7 @@ dotenv.config();
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 // app.use(express.json());
-app.use(express.json({ limit: '50mb' })); // test giới hạn base64, tuần sau chuyển qua cloud
+app.use(express.json({ limit: '50mb' })); 
 
 app.use(cors());
 
@@ -18,7 +18,7 @@ const likeRoutes = require("./routes/likeRoutes");
 const commentRoutes = require("./routes/commentRoutes");
 const chatRoutes = require('./routes/chatRoutes');
 const followRoutes = require('./routes/followRoutes');
-
+const notificationRoutes = require('./routes/notification');
 // Sử dụng routes
 app.use("/auth", authRoutes);
 app.use("/posts", postRoutes);
@@ -27,6 +27,7 @@ app.use("/likes", likeRoutes);
 app.use("/comments", commentRoutes);
 app.use('/chat', chatRoutes);
 app.use('/follow', followRoutes);
+app.use('/noti', notificationRoutes);
 
 
 // API kiểm tra hoạt động của Gateway

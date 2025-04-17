@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const verifyToken = require('../middlewares/verifyToken');
 const {
     getRecentNotifications,
     getAllNotifications,
@@ -9,8 +8,6 @@ const {
     createNotification
 } = require('../controllers/notificationController');
 
-// Áp dụng verifyToken cho tất cả route
-router.use(verifyToken);
 
 // Danh sách route
 router.get('/noti/ListRecent', getRecentNotifications);       // 10 thông báo gần nhất
