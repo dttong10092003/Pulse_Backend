@@ -296,7 +296,7 @@ const getUserDetails = async (req, res) => {
     }
   
     try {
-      const user = await User.findById(userId).select('firstname lastname avatar');
+      const user = await UserDetail.findOne({ userId }).select('firstname lastname avatar');
   
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
@@ -318,4 +318,5 @@ const getUserDetails = async (req, res) => {
       });
     }
   };
+
 module.exports = { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users,getUserDetails };

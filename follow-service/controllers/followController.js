@@ -3,43 +3,44 @@ const axios = require('axios');
 const mongoose = require('mongoose');
 
 // Follow người dùng khác
-const followUser = async (req, res) => {
-    const followerId = req.headers['x-user-id'];  // lấy ID người theo dõi từ header
-    const { followingId } = req.body;  // lấy ID người cần theo dõi từ body
-  
-    if (!followerId || !followingId) {
-      return res.status(400).json({ message: 'Missing followerId or followingId.' });
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(followerId) || !mongoose.Types.ObjectId.isValid(followingId)) {
-      return res.status(400).json({ message: 'Invalid ObjectId.' });
-    }
-  
-    if (followerId === followingId) {
-      return res.status(400).json({ message: 'You cannot follow yourself.' });
-    }
-  
-    try {
-      // Kiểm tra xem mối quan hệ này đã tồn tại chưa
-      const existing = await Follow.findOne({ followerId, followingId });
-      if (existing) {
-        return res.status(409).json({ message: 'Already following this user.' });
+  const followUser = async (req, res) => {
+      const followerId = req.headers['x-user-id'];  // lấy ID người theo dõi từ header
+      const { followingId } = req.body;  // lấy ID người cần theo dõi từ body
+      console.log('Follower ID:', followerId);
+      console.log('Following ID:', followingId);
+      if (!followerId || !followingId) {
+        return res.status(400).json({ message: 'Missing followerId or followingId.' });
       }
-  
-      // Tạo mới quan hệ follow
-      const follow = await Follow.create({ followerId, followingId });
-      return res.status(201).json({
-        message: 'Followed successfully.',
-        data: follow
-      });
-    } catch (error) {
-      console.error("Error in followUser:", error);  // Log lỗi ở backend
-      return res.status(500).json({
-        message: 'Internal server error.',
-        error: error.message
-      });
-    }
-};
+
+      if (!mongoose.Types.ObjectId.isValid(followerId) || !mongoose.Types.ObjectId.isValid(followingId)) {
+        return res.status(400).json({ message: 'Invalid ObjectId.' });
+      }
+    
+      if (followerId === followingId) {
+        return res.status(400).json({ message: 'You cannot follow yourself.' });
+      }
+    
+      try {
+        // Kiểm tra xem mối quan hệ này đã tồn tại chưa
+        const existing = await Follow.findOne({ followerId, followingId });
+        if (existing) {
+          return res.status(409).json({ message: 'Already following this user.' });
+        }
+    
+        // Tạo mới quan hệ follow
+        const follow = await Follow.create({ followerId, followingId });
+        return res.status(201).json({
+          message: 'Followed successfully.',
+          data: follow
+        });
+      } catch (error) {
+        console.error("Error in followUser:", error);  // Log lỗi ở backend
+        return res.status(500).json({
+          message: 'Internal server error.',
+          error: error.message
+        });
+      }
+  };
 
 // Hủy follow
 const unfollowUser = async (req, res) => {
@@ -88,9 +89,9 @@ const getFollowers = async (req, res) => {
     const followerIds = followers.map(f => f.followerId);
 
     // Gọi API user-service để lấy thông tin người dùng (firstname, lastname, avatar)
-    const userDetails = await Promise.all(followerIds.map(async (followerId) => {
+    const userDetails = await Promise.all(followerIds.map(async (userId) => {
       try {
-        const response = await axios.get(`http://user-service:5002/users/${followerId}`);
+        const response = await axios.get(`http://user-service:5002/user-details/${userId}`);
         return response.data; // Đảm bảo API trả về đúng định dạng
       } catch (error) {
         console.error("Error fetching user details:", error);
@@ -142,9 +143,9 @@ const getFollowings = async (req, res) => {
     const followingIds = followings.map(f => f.followingId);
 
     // Lấy thông tin người dùng cho các followingIds (truy vấn thủ công)
-    const userDetails = await Promise.all(followingIds.map(async (followingId) => {
+    const userDetails = await Promise.all(followingIds.map(async (userId) => {
       try {
-        const response = await axios.get(`http://user-service:5002/users/${followingId}`);
+        const response = await axios.get(`http://user-service:5002/user-details/${userId}`);
         console.log(response.data);  // Kiểm tra dữ liệu trả về
         return response.data;
       } catch (error) {
