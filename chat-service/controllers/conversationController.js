@@ -71,6 +71,7 @@ exports.getAllConversations = async (req, res) => {
         const senderInfo = userMap[msg.senderId.toString()] || { name: 'Unknown', avatar: '' };
 
         return {
+        _id: msg._id,
         senderId: msg.senderId,
         name: senderInfo.name,
         content: msg.content,

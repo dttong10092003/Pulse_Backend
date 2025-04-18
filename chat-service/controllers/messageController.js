@@ -98,6 +98,11 @@ exports.revokeMessage = async (req, res) => {
       return res.status(403).json({ message: "Bạn không có quyền thu hồi tin nhắn này" });
     }
 
+    // Nếu tin nhắn là loại file, chuyển type thành text và thay đổi nội dung
+    if (message.type !== 'text') {
+      message.type = 'text';
+    }
+
     message.isDeleted = true;
     message.content = "Message revoked";
     message.isPinned = false; // Bỏ ghim nếu tin nhắn đã được ghim
@@ -106,11 +111,38 @@ exports.revokeMessage = async (req, res) => {
     await redisClient.lRem(`pinned:${message.conversationId}`, 1, messageId); // Xóa khỏi danh sách ghim trong Redis nếu có
     
 
-    res.json({ message: "Tin nhắn đã được thu hồi" });
+    res.json({ messageId });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.deleteMessage = async (req, res) => {
+  try {
+    const { messageId, senderId } = req.body;
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Tin nhắn không tồn tại" });
+    }
+
+    // Kiểm tra quyền người gửi
+    if (message.senderId.toString() !== senderId.toString()) {
+      return res.status(403).json({ message: "Bạn không có quyền xóa tin nhắn này" });
+    }
+
+    // Xóa tin nhắn khỏi cơ sở dữ liệu
+    await message.deleteOne();
+
+    // Cập nhật Redis (xóa cache)
+    await redisClient.del(`messages:${message.conversationId}`);
+
+    res.json({ messageId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 // 📌 Bỏ ghim tin nhắn
 exports.unpinMessage = async (req, res) => {
