@@ -7,7 +7,7 @@ require('dotenv').config();
 const messageRoutes = require('./routes/messageRoute');
 const conversationRoutes = require('./routes/conversationRoute');
 const redisClient = require('./config/redisClient');
-// const Message = require('./models/message');
+const Message = require('./models/message');
 const { sendMessage } = require('./controllers/messageController');
 
 const app = express();
@@ -70,6 +70,57 @@ io.on('connection', (socket) => {
       console.log('✅ Sent new message to room:', conversationId);
     } catch (error) {
       console.error('Error sending message:', error);
+    }
+  });
+
+  socket.on('revokeMessage', async (data) => {
+    const { messageId, senderId, conversationId } = data;
+  
+    try {
+      const message = await Message.findById(messageId);
+      if (!message) {
+        return socket.emit('error', { message: 'Message not found' });
+      }
+  
+      if (message.senderId.toString() !== senderId.toString()) {
+        return socket.emit('error', { message: "You don't have permission to revoke this message" });
+      }
+  
+      message.isDeleted = true;
+      message.content = "Message revoked";
+      message.type = 'text'; 
+      await message.save();
+  
+      // Phát sự kiện cho tất cả các client trong phòng chat
+      io.to(conversationId).emit('messageRevoked', { messageId, senderId });
+  
+      console.log('✅ Message revoked and event emitted to room:', conversationId);
+    } catch (error) {
+      console.error('Error revoking message:', error);
+    }
+  });
+
+  socket.on('deleteMessage', async (data) => {
+    const { messageId, senderId, conversationId } = data;
+  
+    try {
+      const message = await Message.findById(messageId);
+      if (!message) {
+        return socket.emit('error', { message: 'Message not found' });
+      }
+  
+      if (message.senderId.toString() !== senderId.toString()) {
+        return socket.emit('error', { message: "You don't have permission to delete this message" });
+      }
+  
+      await message.deleteOne();
+  
+      // Phát sự kiện cho tất cả các client trong phòng chat
+      io.to(conversationId).emit('messageDeleted', { messageId, senderId });
+  
+      console.log('✅ Message deleted and event emitted to room:', conversationId);
+    } catch (error) {
+      console.error('Error deleting message:', error);
     }
   });
 
