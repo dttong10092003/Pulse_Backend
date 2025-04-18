@@ -126,7 +126,7 @@ services:
     ports:
       - "27017:27017"
   
-  signaling-service:
-    build: ./signaling-service
-    ports:
-       - "8000:8000"
+  # signaling-service:
+  #   build: ./signaling-service
+  #   ports:
+  #      - "8000:8000"
