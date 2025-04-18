@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL
 const axios = require("axios");
 const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
+const FOLLOW_SERVICE_URL = process.env.FOLLOW_SERVICE_URL;
 
 // Hàm xác thực JWT và lấy userId
 const verifyToken = (req) => {
@@ -290,33 +291,79 @@ const getTop10Users = async (req, res) => {
 
 const getUserDetails = async (req, res) => {
     const { userId } = req.params;
-  
-    if (!userId) {
-      return res.status(400).json({ message: 'Missing userId param.' });
-    }
-  
-    try {
-      const user = await UserDetail.findOne({ userId }).select('firstname lastname avatar');
-  
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-  
-      return res.status(200).json({
-        message: 'User details retrieved successfully.',
-        data: {
-          firstname: user.firstname,
-          lastname: user.lastname,
-          avatar: user.avatar,
-        }
-      });
-    } catch (error) {
-      console.error("Error in getUserDetails:", error);
-      return res.status(500).json({
-        message: 'Internal server error.',
-        error: error.message
-      });
-    }
-  };
 
-module.exports = { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users,getUserDetails };
+    if (!userId) {
+        return res.status(400).json({ message: 'Missing userId param.' });
+    }
+
+    try {
+        const user = await UserDetail.findOne({ userId }).select('firstname lastname avatar');
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        return res.status(200).json({
+            message: 'User details retrieved successfully.',
+            data: {
+                firstname: user.firstname,
+                lastname: user.lastname,
+                avatar: user.avatar,
+            }
+        });
+    } catch (error) {
+        console.error("Error in getUserDetails:", error);
+        return res.status(500).json({
+            message: 'Internal server error.',
+            error: error.message
+        });
+    }
+};
+
+const getTopUsersExcludingFollowed = async (req, res) => {
+    try {
+        const { excludeUserId } = req.query;
+
+        if (!excludeUserId || !mongoose.Types.ObjectId.isValid(excludeUserId)) {
+            return res.status(400).json({ message: "Invalid excludeUserId" });
+        }
+
+        // Gọi follow-service để lấy danh sách người đã follow
+        const followRes = await axios.get(`${FOLLOW_SERVICE_URL}/follow/followings/${excludeUserId}`);
+        const followings = followRes.data?.data || [];
+
+        const followingIds = followings.map(f => f.user._id); // hoặc f.followingId tuỳ backend trả về
+
+        // Lọc user chưa bị follow và không phải chính mình
+        const userDetails = await UserDetail.find({
+            userId: {
+                $ne: new mongoose.Types.ObjectId(excludeUserId),
+                $nin: followingIds.map(id => new mongoose.Types.ObjectId(id))
+            }
+        }).sort({ createdAt: -1 }).lean();
+
+        const userIds = userDetails.map((u) => u.userId);
+
+        const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, {
+            userIds,
+        });
+
+        const userMap = authResponse.data;
+
+        const result = userDetails.map((detail) => ({
+            _id: detail.userId.toString(),
+            firstname: detail.firstname,
+            lastname: detail.lastname,
+            avatar: detail.avatar,
+            username: userMap[detail.userId.toString()] || "unknown",
+        }));
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error("❌ Error in getTopUsersExcludingFollowed:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+
+module.exports = { getTopUsersExcludingFollowed, getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users, getUserDetails };

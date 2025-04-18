@@ -3,6 +3,7 @@ const router = express.Router();
 const userService = require("../services/userService");
 const { authenticateToken } = require("../middleware/authMiddleware");
 
+router.get('/top-users', userService.getTopUsersExcludingFollowed);
 router.get("/top10-users", userService.getTop10Users); // Lấy danh sách 10 người dùng
 // router.get("/:id", authenticateToken, userService.getUser);
 router.put("/:id", authenticateToken, userService.updateUser);
