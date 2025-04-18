@@ -1,8 +1,9 @@
 const express = require('express');
-const { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds,getTop10Users, getUserDetails } = require('../controllers/userController');
+const { getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds,getTop10Users, getUserDetails, getTopUsersExcludingFollowed } = require('../controllers/userController');
 
 const router = express.Router();
 
+router.get('/top-users',getTopUsersExcludingFollowed);
 router.get('/top10-users', getTop10Users);
 router.post('/check-email-phone', checkEmailOrPhoneExists);
 router.post('/user-details-by-ids', getUserDetailsByIds);

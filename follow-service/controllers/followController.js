@@ -162,8 +162,6 @@ const getFollowings = async (req, res) => {
     console.error("Error in getFollowings:", error);
     return res.status(500).json({ message: 'Internal server error.', error: error.message });
   }
-  console.log("👉 USER_SERVICE_URL:", USER_SERVICE_URL);
-console.log("👉 userIds gửi đi:", followingIds);
 };
 
 

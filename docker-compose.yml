@@ -54,7 +54,7 @@ services:
       - JWT_SECRET=mySuperSecretKey12345!@#123
       - AUTH_SERVICE_URL=http://auth-service:5000
       - CLOUDINARY_URL=cloudinary://917723455993985:4sIKSFniroLohdzbPDk3nzfREzs@df2amyjzw
-
+      - FOLLOW_SERVICE_URL=http://follow-service:5006
     depends_on:
       - mongo 
   like-service: 
