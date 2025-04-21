@@ -214,4 +214,5 @@ module.exports = {
   getPinnedMessages,
   revokeMessage,
   unpinMessage,
+  deleteMessage,
 };
