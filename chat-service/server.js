@@ -8,6 +8,7 @@ const messageRoutes = require('./routes/messageRoute');
 const conversationRoutes = require('./routes/conversationRoute');
 const redisClient = require('./config/redisClient');
 const Message = require('./models/message');
+const Conversation = require('./models/conversation');
 const { sendMessage } = require('./controllers/messageController');
 
 const app = express();
@@ -121,6 +122,39 @@ io.on('connection', (socket) => {
       console.log('✅ Message deleted and event emitted to room:', conversationId);
     } catch (error) {
       console.error('Error deleting message:', error);
+    }
+  });
+
+  // Lắng nghe sự kiện tạo cuộc trò chuyện mới
+  socket.on('createPrivateConversation', async (data) => {
+    const { members } = data; // members là mảng gồm 2 user (userA và userB)
+
+    try {
+      // Tạo cuộc trò chuyện mới mà không kiểm tra sự tồn tại
+      const conversation = new Conversation({
+        members: members.map(member => member.userId),
+        isGroup: false,
+      });
+      
+      await conversation.save();
+
+      const conversationWithDetails = {
+        _id: conversation._id,
+        ...conversation.toObject(),
+        members: members.map(member => ({
+          userId: member.userId,
+          name: member.name,
+          avatar: member.avatar || '', 
+        })),
+        messages: [], // Thêm trường messages nếu cần thiết
+      };
+      
+      // Phát sự kiện cho tất cả client về cuộc trò chuyện mới
+      io.emit('newConversation', conversationWithDetails);  // Phát sự kiện cho tất cả client kết nối
+      
+      console.log(`✅ New conversation created and emitted: ${conversation._id}`);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
     }
   });
 
