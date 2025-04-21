@@ -119,6 +119,44 @@ exports.createOrGetPrivateConversation = async (req, res) => {
   }
 };
 
+exports.createOrGetPrivateConversation_App = async (req, res) => {
+  try {
+    // ✅ Tự giải mã token
+    const authHeader = req.header("Authorization");
+    const token = authHeader?.split(" ")[1];
+
+    if (!token) return res.status(401).json({ message: "Token required" });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user1 = decoded.userId; // 🔥 Lấy userId trực tiếp từ token
+    const user2 = req.body.user2;
+
+    if (!user2 || user1 === user2) {
+      return res.status(400).json({ message: "Invalid user selection" });
+    }
+
+    // ✅ Tìm hoặc tạo cuộc trò chuyện giữa 2 người
+    let conversation = await Conversation.findOne({
+      isGroup: false,
+      members: { $all: [user1, user2], $size: 2 },
+    });
+
+    if (!conversation) {
+      conversation = new Conversation({
+        isGroup: false,
+        members: [user1, user2],
+      });
+      await conversation.save();
+    }
+
+    res.status(200).json(conversation);
+  } catch (err) {
+    console.error("❌ Error creating conversation:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
 // 📌 Tạo nhóm chat
 exports.createGroupConversation = async (req, res) => {
   try {

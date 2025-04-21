@@ -185,11 +185,21 @@ const updateGroupConversation = async (req, res) => {
   }
 };
 
+const createOrGetPrivateConversation_App = async (req, res) => {
+  try {
+    const response = await axios.post(`${CHAT_SERVICE_URL}/conversations/private_app`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+}
+
 module.exports = {
   updateGroupConversation,
   getAllConversations,
   checkUserOnline,
   createOrGetPrivateConversation,
+  createOrGetPrivateConversation_App,
   createGroupConversation,
   addMemberToGroup,
   removeMemberFromGroup,

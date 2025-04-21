@@ -54,7 +54,7 @@ services:
       - JWT_SECRET=mySuperSecretKey12345!@#123
       - AUTH_SERVICE_URL=http://auth-service:5000
       - CLOUDINARY_URL=cloudinary://917723455993985:4sIKSFniroLohdzbPDk3nzfREzs@df2amyjzw
-
+      - FOLLOW_SERVICE_URL=http://follow-service:5006
     depends_on:
       - mongo 
   like-service: 
@@ -100,10 +100,10 @@ services:
     environment:
       - MONGODB_URI=mongodb+srv://follow:follow@follow.r3ypo.mongodb.net/?retryWrites=true&w=majority&appName=follow
       - JWT_SECRET=mySuperSecretKey12345!@#123
+      - USER_SERVICE_URL=http://user-service:5002
     depends_on:
       - mongo
       - auth-service
-
   notification-service: 
     build:
       context: ./notification-service
@@ -115,7 +115,6 @@ services:
     depends_on:
       - mongo
       - auth-service
-
   redis: 
     image: redis
     ports:
@@ -125,8 +124,3 @@ services:
     image: mongo
     ports:
       - "27017:27017"
-  
-  # signaling-service:
-  #   build: ./signaling-service
-  #   ports:
-  #      - "8000:8000"
