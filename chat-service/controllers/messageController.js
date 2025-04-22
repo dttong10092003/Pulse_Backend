@@ -193,13 +193,16 @@ exports.sendMessage = async ({ conversationId, senderId, type, content, timestam
   try {
     let fileUrl = content;
 
-    if(['image', 'video', 'audio', 'file'].includes(type)){
-      if (fileName && fileType && content.startsWith('data:')) {
+    if (['image', 'video', 'audio', 'file'].includes(type)) {
+      const isBase64 = typeof content === 'string' && content.startsWith('data:');
+      const isUrl = typeof content === 'string' && content.startsWith('http');
+
+      if (isBase64 && fileName && fileType) {
         const { buffer } = parseBase64(content);
         const cloudinaryResponse = await uploadToCloudinary(buffer, fileName, "chat_files");
         fileUrl = cloudinaryResponse;
-      } else {
-        throw new Error("Invalid file upload");
+      } else if (!isUrl) {
+        throw new Error("Invalid file upload: must be base64 or uploaded URL");
       }
     }
 

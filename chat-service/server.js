@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const mongoose = require('mongoose');
+const axios = require('axios');
 require('dotenv').config();
 
 const messageRoutes = require('./routes/messageRoute');
@@ -31,6 +32,9 @@ app.use('/conversations', conversationRoutes);
 // Socket.io xử lý real-time
 io.on('connection', (socket) => {
   console.log('🔥 User connected:', socket.id);
+  socket.on('setup', (userId) => {
+    socket.join(userId); // Cho phép emit đến userId như một room
+  });
 
   // Khi người dùng online
   socket.on('userOnline', async (userId) => {
@@ -52,13 +56,13 @@ io.on('connection', (socket) => {
       // Gọi hàm sendMessage từ controller để xử lý và lưu tin nhắn
       // const newMessage = await sendMessage({ conversationId, senderId, type, content, timestamp, isDeleted, isPinned });
       const newMessage = await sendMessage({
-        conversationId, 
-        senderId, 
-        type, 
-        content, 
-        timestamp, 
-        isDeleted, 
-        isPinned, 
+        conversationId,
+        senderId,
+        type,
+        content,
+        timestamp,
+        isDeleted,
+        isPinned,
         fileName,
         fileType,
       });
@@ -78,25 +82,25 @@ io.on('connection', (socket) => {
 
   socket.on('revokeMessage', async (data) => {
     const { messageId, senderId, conversationId } = data;
-  
+
     try {
       const message = await Message.findById(messageId);
       if (!message) {
         return socket.emit('error', { message: 'Message not found' });
       }
-  
+
       if (message.senderId.toString() !== senderId.toString()) {
         return socket.emit('error', { message: "You don't have permission to revoke this message" });
       }
-  
+
       message.isDeleted = true;
       message.content = "Message revoked";
-      message.type = 'text'; 
+      message.type = 'text';
       await message.save();
-  
+
       // Phát sự kiện cho tất cả các client trong phòng chat
       io.to(conversationId).emit('messageRevoked', { messageId, senderId });
-  
+
       console.log('✅ Message revoked and event emitted to room:', conversationId);
     } catch (error) {
       console.error('Error revoking message:', error);
@@ -105,22 +109,22 @@ io.on('connection', (socket) => {
 
   socket.on('deleteMessage', async (data) => {
     const { messageId, senderId, conversationId } = data;
-  
+
     try {
       const message = await Message.findById(messageId);
       if (!message) {
         return socket.emit('error', { message: 'Message not found' });
       }
-  
+
       if (message.senderId.toString() !== senderId.toString()) {
         return socket.emit('error', { message: "You don't have permission to delete this message" });
       }
-  
+
       await message.deleteOne();
-  
+
       // Phát sự kiện cho tất cả các client trong phòng chat
       io.to(conversationId).emit('messageDeleted', { messageId, senderId });
-  
+
       console.log('✅ Message deleted and event emitted to room:', conversationId);
     } catch (error) {
       console.error('Error deleting message:', error);
@@ -137,7 +141,7 @@ io.on('connection', (socket) => {
         members: members.map(member => member.userId),
         isGroup: false,
       });
-      
+
       await conversation.save();
 
       const conversationWithDetails = {
@@ -146,14 +150,14 @@ io.on('connection', (socket) => {
         members: members.map(member => ({
           userId: member.userId,
           name: member.name,
-          avatar: member.avatar || '', 
+          avatar: member.avatar || '',
         })),
         messages: [], // Thêm trường messages nếu cần thiết
       };
-      
+
       // Phát sự kiện cho tất cả client về cuộc trò chuyện mới
       io.emit('newConversation', conversationWithDetails);  // Phát sự kiện cho tất cả client kết nối
-      
+
       console.log(`✅ New conversation created and emitted: ${conversation._id}`);
     } catch (error) {
       console.error('Error creating conversation:', error);
@@ -162,7 +166,7 @@ io.on('connection', (socket) => {
 
   socket.on('createGroupConversation', async (data) => {
     const { groupName, members, adminId, avatar } = data;
-  
+
     try {
       let avatarUrl = '';
 
@@ -174,7 +178,7 @@ io.on('connection', (socket) => {
       }
 
       const memberIds = members.map(member => member.userId);
-  
+
       const conversation = new Conversation({
         groupName,
         members: memberIds,
@@ -182,9 +186,9 @@ io.on('connection', (socket) => {
         adminId,
         avatar: avatarUrl,
       });
-  
+
       await conversation.save();
-  
+
       const conversationWithDetails = {
         _id: conversation._id,
         ...conversation.toObject(),
@@ -195,17 +199,99 @@ io.on('connection', (socket) => {
         })),
         messages: [],
       };
-  
+
       io.emit('newConversation', conversationWithDetails);
-  
+
       console.log(`✅ Group conversation created and emitted: ${conversation._id}`);
     } catch (error) {
       console.error('❌ Error creating group conversation:', error);
     }
   });
-  
 
-   // Khi người dùng rời phòng (disconnect)
+  // XÓA THÀNH VIÊN
+  socket.on('removeMember', async ({ conversationId, userIdToRemove }) => {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) return;
+
+    // Xóa thành viên khỏi mảng
+    conversation.members = conversation.members.filter(
+      (id) => id.toString() !== userIdToRemove
+    );
+    await conversation.save();
+
+    // Emit tới tất cả các user trong room
+    io.to(conversationId).emit('memberRemoved', {
+      conversationId,
+      userId: userIdToRemove,
+    });
+  });
+
+  // CHUYỂN QUYỀN ADMIN
+  socket.on('transferAdmin', async ({ conversationId, newAdminId }) => {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) return;
+
+    conversation.adminId = newAdminId;
+    await conversation.save();
+
+    io.to(conversationId).emit('adminTransferred', {
+      conversationId,
+      newAdminId,
+    });
+  });
+
+  //add member
+  socket.on('addMembersToGroup', async ({ conversationId, newMembers }) => {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) return;
+
+    const membersToAdd = newMembers.map(member => member.userId);
+    conversation.members.push(...membersToAdd);
+    await conversation.save();
+
+    // Emit cập nhật lại cho tất cả thành viên hiện tại
+    io.to(conversationId).emit('memberAdded', {
+      conversationId,
+      newMembers,
+    });
+
+    console.log("conveersation", conversation, "newMembers", newMembers);
+
+    try {
+      const userServiceUrl = process.env.USER_SERVICE_URL || 'http://user-service:5002';
+      const userDetailsRes = await axios.post(`${userServiceUrl}/users/user-details-by-ids`, {
+        userIds: conversation.members.map(id => id.toString()), // full danh sách sau khi thêm
+      });
+
+      const userDetailsMap = userDetailsRes.data.reduce((acc, user) => {
+        acc[user.userId] = {
+          userId: user.userId,
+          name: `${user.firstname} ${user.lastname}`,
+          avatar: user.avatar || '',
+        };
+        return acc;
+      }, {});
+
+      const enrichedConversation = {
+        ...conversation.toObject(),
+        members: conversation.members.map(id => userDetailsMap[id.toString()] || { userId: id, name: 'Unknown', avatar: '' }),
+        messages: [], // Gửi conversation mới cho user nhưng không cần gửi messages
+      };
+
+      newMembers.forEach(member => {
+        io.to(member.userId).emit('newConversation', enrichedConversation);
+      });
+    } catch (error) {
+      console.error('❌ Lỗi khi enrich conversation cho thành viên mới:', error.message);
+    }
+
+    // newMembers.forEach(member => {
+    //   io.to(member.userId).emit('newConversation', {...conversation.toObject(), messages: []});
+    // });
+  });
+
+
+  // Khi người dùng rời phòng (disconnect)
   socket.on('disconnect', async () => {
     console.log('❌ User disconnected:', socket.id);
     // await redisClient.del(`online:${socket.id}`);
