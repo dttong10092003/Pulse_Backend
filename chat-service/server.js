@@ -10,6 +10,8 @@ const redisClient = require('./config/redisClient');
 const Message = require('./models/message');
 const Conversation = require('./models/conversation');
 const { sendMessage } = require('./controllers/messageController');
+const { uploadToCloudinary } = require('./utils/cloudinary');
+const { parseBase64 } = require('./utils/parseBase64');
 
 const app = express();
 const server = http.createServer(app);
@@ -157,6 +159,51 @@ io.on('connection', (socket) => {
       console.error('Error creating conversation:', error);
     }
   });
+
+  socket.on('createGroupConversation', async (data) => {
+    const { groupName, members, adminId, avatar } = data;
+  
+    try {
+      let avatarUrl = '';
+
+      if (avatar && typeof avatar === 'string') {
+        const { mimeType, buffer } = parseBase64(avatar);
+        const ext = mimeType.split('/')[1];
+        const fileName = `group_${Date.now()}.${ext}`;
+        avatarUrl = await uploadToCloudinary(buffer, fileName, 'group_avatars');
+      }
+
+      const memberIds = members.map(member => member.userId);
+  
+      const conversation = new Conversation({
+        groupName,
+        members: memberIds,
+        isGroup: true,
+        adminId,
+        avatar: avatarUrl,
+      });
+  
+      await conversation.save();
+  
+      const conversationWithDetails = {
+        _id: conversation._id,
+        ...conversation.toObject(),
+        members: members.map(member => ({
+          userId: member.userId,
+          name: member.name,
+          avatar: member.avatar || '',
+        })),
+        messages: [],
+      };
+  
+      io.emit('newConversation', conversationWithDetails);
+  
+      console.log(`✅ Group conversation created and emitted: ${conversation._id}`);
+    } catch (error) {
+      console.error('❌ Error creating group conversation:', error);
+    }
+  });
+  
 
    // Khi người dùng rời phòng (disconnect)
   socket.on('disconnect', async () => {
