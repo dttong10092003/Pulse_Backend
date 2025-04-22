@@ -115,6 +115,17 @@ services:
     depends_on:
       - mongo
       - auth-service
+
+  call-service:
+    build:
+      context: ./call-service
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+    depends_on:
+      - mongo
+
   redis: 
     image: redis
     ports:
