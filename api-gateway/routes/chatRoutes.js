@@ -2,7 +2,7 @@ const express = require('express');
 const chatService = require('../services/chatService');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const router = express.Router();
-console.log("📡 CHAT_SERVICE_URL =", process.env.CHAT_SERVICE_URL);
+
 // 📌 Conversations
 router.get('/conversations/all/:userId', authenticateToken, chatService.getAllConversations);
 router.post('/conversations/private', authenticateToken, chatService.createOrGetPrivateConversation);
@@ -30,5 +30,6 @@ router.post('/messages/revoke', authenticateToken, chatService.revokeMessage);
 
 router.put('/conversations/group/update/:conversationId', authenticateToken, chatService.updateGroupConversation); // Thêm route này
 router.post('/messages/delete', authenticateToken, chatService.deleteMessage);
+router.get('/messages/unread/:userId', authenticateToken, chatService.getUnreadCount);
 
 module.exports = router;

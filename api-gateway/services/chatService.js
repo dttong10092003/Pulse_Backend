@@ -194,6 +194,28 @@ const createOrGetPrivateConversation_App = async (req, res) => {
   }
 }
 
+const deleteMessage = async (req, res) => {
+  try {
+    const response = await axios.post(`${CHAT_SERVICE_URL}/messages/delete`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || error.message,
+    });
+  }
+};
+
+const getUnreadCount = async (req, res) => {
+  try {
+    const response = await axios.get(`${CHAT_SERVICE_URL}/unread/${req.params.userId}`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || error.message,
+    });
+  }
+}
+
 module.exports = {
   updateGroupConversation,
   getAllConversations,
@@ -214,5 +236,6 @@ module.exports = {
   getPinnedMessages,
   revokeMessage,
   unpinMessage,
-  deleteMessage,
+  getUnreadCount,
+  deleteMessage
 };

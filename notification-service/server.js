@@ -22,6 +22,35 @@ app.get('/', (req, res) => {
 app.use('/', notificationRoute); // mount route gốc
 
 const PORT = process.env.PORT || 5005;
-app.listen(PORT, () => {
-    console.log(`🚀 Notification Service is running on port ${PORT}`);
+
+
+const http = require('http');
+const { Server } = require('socket.io');
+
+// Tạo server từ express app
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Cho phép frontend kết nối
+  }
 });
+
+// Gắn io vào app để dùng ở controller
+app.set("io", io);
+
+// Lắng nghe kết nối từ client
+io.on("connection", (socket) => {
+  console.log("🟢 Socket connected:", socket.id);
+
+  socket.on("join_user", (userId) => {
+    socket.join(userId);
+    console.log(`👤 User ${userId} joined their personal room`);
+  });
+});
+
+// ⚠️ Đổi từ app.listen sang server.listen
+server.listen(PORT, () => {
+  console.log(`🚀 Notification Service is running on port ${PORT}`);
+});
+
+

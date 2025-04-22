@@ -134,3 +134,4 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5005;
 server.listen(PORT, () => console.log(`🚀 Chat Service running on port ${PORT}`));
+ 
