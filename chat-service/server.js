@@ -155,8 +155,11 @@ io.on('connection', (socket) => {
         messages: [], // Thêm trường messages nếu cần thiết
       };
 
-      // Phát sự kiện cho tất cả client về cuộc trò chuyện mới
-      io.emit('newConversation', conversationWithDetails);  // Phát sự kiện cho tất cả client kết nối
+      // ✅ Gửi riêng cho từng user trong cặp
+      members.forEach(member => {
+        io.to(member.userId).emit('newConversation', conversationWithDetails);
+      });
+
 
       console.log(`✅ New conversation created and emitted: ${conversation._id}`);
     } catch (error) {
@@ -200,7 +203,9 @@ io.on('connection', (socket) => {
         messages: [],
       };
 
-      io.emit('newConversation', conversationWithDetails);
+      members.forEach(member => {
+        io.to(member.userId).emit('newConversation', conversationWithDetails);
+      });
 
       console.log(`✅ Group conversation created and emitted: ${conversation._id}`);
     } catch (error) {
@@ -288,6 +293,51 @@ io.on('connection', (socket) => {
     // newMembers.forEach(member => {
     //   io.to(member.userId).emit('newConversation', {...conversation.toObject(), messages: []});
     // });
+  });
+
+  socket.on('updateGroupAvatar', async ({ conversationId, avatar }) => {
+    try {
+      const conversation = await Conversation.findById(conversationId);
+      if (!conversation) return;
+
+      if (typeof avatar === 'string') {
+        const { mimeType, buffer } = parseBase64(avatar);
+        const ext = mimeType.split('/')[1];
+        const fileName = `group_${Date.now()}.${ext}`;
+        const avatarUrl = await uploadToCloudinary(buffer, fileName, 'group_avatars');
+
+        conversation.avatar = avatarUrl;
+        await conversation.save();
+
+        io.to(conversationId).emit('groupAvatarUpdated', {
+          conversationId,
+          avatar: avatarUrl,
+        });
+
+        console.log(`🖼️ Avatar updated for group ${conversationId}`);
+      }
+    } catch (error) {
+      console.error('❌ Error updating group avatar:', error.message);
+    }
+  });
+
+  socket.on('updateGroupName', async ({ conversationId, groupName }) => {
+    try {
+      const conversation = await Conversation.findById(conversationId);
+      if (!conversation) return;
+
+      conversation.groupName = groupName;
+      await conversation.save();
+
+      io.to(conversationId).emit('groupNameUpdated', {
+        conversationId,
+        groupName,
+      });
+
+      console.log(`✏️ Group name updated for ${conversationId}`);
+    } catch (error) {
+      console.error('❌ Error updating group name:', error.message);
+    }
   });
 
 
