@@ -14,6 +14,8 @@ services:
       - CMT_SERVICE_URL=http://cmt-service:5004
       - CHAT_SERVICE_URL=http://chat-service:5005
       - FOLLOW_SERVICE_URL=http://follow-service:5006
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5007
+
   auth-service:
     build:
       context: ./auth-service # Chỉ ra nơi có Dockerfile của auth-service
@@ -37,7 +39,10 @@ services:
     environment:
       - MONGODB_URI=mongodb+srv://tinphan309z:tinphan309z@cluster0.dvppvh4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - AUTH_SERVICE_URL=http://auth-service:5000
+      - USER_SERVICE_URL=http://user-service:5002
       - JWT_SECRET=mySuperSecretKey12345!@#123
+      - CLOUDINARY_URL=cloudinary://917723455993985:4sIKSFniroLohdzbPDk3nzfREzs@df2amyjzw
+      - USER_SERVICE_URL=http://user-service:5002
     depends_on:
       - mongo 
 
@@ -50,6 +55,8 @@ services:
       - MONGODB_URI=mongodb+srv://auth123:auth123@cluster0.gmid9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - JWT_SECRET=mySuperSecretKey12345!@#123
       - AUTH_SERVICE_URL=http://auth-service:5000
+      - CLOUDINARY_URL=cloudinary://917723455993985:4sIKSFniroLohdzbPDk3nzfREzs@df2amyjzw
+      - FOLLOW_SERVICE_URL=http://follow-service:5006
     depends_on:
       - mongo 
   like-service: 
@@ -70,6 +77,7 @@ services:
     environment:
       - MONGODB_URI=mongodb+srv://tinphan309z:tinphan309z@cluster0.dvppvh4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - JWT_SECRET=mySuperSecretKey12345!@#123
+      - USER_SERVICE_URL=http://user-service:5002
     depends_on:
       - mongo
       - auth-service
@@ -82,6 +90,7 @@ services:
       - MONGODB_URI=mongodb+srv://message:message@cluster0.pj1pmat.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - REDIS_URL=redis://redis:6379
       - USER_SERVICE_URL=http://user-service:5002
+      - CLOUDINARY_URL=cloudinary://725489854714717:FWkFjsjCpKtmrpzTCe8S-13cuf8@dh9otw5el
     depends_on:
       - mongo
       - redis
@@ -94,9 +103,31 @@ services:
     environment:
       - MONGODB_URI=mongodb+srv://follow:follow@follow.r3ypo.mongodb.net/?retryWrites=true&w=majority&appName=follow
       - JWT_SECRET=mySuperSecretKey12345!@#123
+      - USER_SERVICE_URL=http://user-service:5002
     depends_on:
       - mongo
       - auth-service
+  notification-service: 
+    build:
+      context: ./notification-service
+    ports:
+      - "5007:5007"
+    environment:
+      - MONGODB_URI=mongodb+srv://thanhnam:thanhnam@cluster01.b0n1v.mongodb.net/?retryWrites=true&w=majority&appName=Cluster01
+      - JWT_SECRET=mySuperSecretKey12345!@#123
+    depends_on:
+      - mongo
+      - auth-service
+
+  call-service:
+    build:
+      context: ./call-service
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+    depends_on:
+      - mongo
 
   redis: 
     image: redis
@@ -107,3 +138,4 @@ services:
     image: mongo
     ports:
       - "27017:27017"
+

@@ -1,5 +1,6 @@
 const Message = require('../models/message');
 const redisClient = require('../config/redisClient');
+const { uploadToCloudinary } = require('../utils/cloudinary');
 
 // 📌 Lấy 5 tin nhắn gần nhất là hình ảnh
 exports.getRecentImages = async (req, res) => {
@@ -97,6 +98,11 @@ exports.revokeMessage = async (req, res) => {
       return res.status(403).json({ message: "Bạn không có quyền thu hồi tin nhắn này" });
     }
 
+    // Nếu tin nhắn là loại file, chuyển type thành text và thay đổi nội dung
+    if (message.type !== 'text') {
+      message.type = 'text';
+    }
+
     message.isDeleted = true;
     message.content = "Message revoked";
     message.isPinned = false; // Bỏ ghim nếu tin nhắn đã được ghim
@@ -105,11 +111,38 @@ exports.revokeMessage = async (req, res) => {
     await redisClient.lRem(`pinned:${message.conversationId}`, 1, messageId); // Xóa khỏi danh sách ghim trong Redis nếu có
     
 
-    res.json({ message: "Tin nhắn đã được thu hồi" });
+    res.json({ messageId });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.deleteMessage = async (req, res) => {
+  try {
+    const { messageId, senderId } = req.body;
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Tin nhắn không tồn tại" });
+    }
+
+    // Kiểm tra quyền người gửi
+    if (message.senderId.toString() !== senderId.toString()) {
+      return res.status(403).json({ message: "Bạn không có quyền xóa tin nhắn này" });
+    }
+
+    // Xóa tin nhắn khỏi cơ sở dữ liệu
+    await message.deleteOne();
+
+    // Cập nhật Redis (xóa cache)
+    await redisClient.del(`messages:${message.conversationId}`);
+
+    res.json({ messageId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 // 📌 Bỏ ghim tin nhắn
 exports.unpinMessage = async (req, res) => {
@@ -141,12 +174,39 @@ exports.unpinMessage = async (req, res) => {
   }
 };
 
-// 📌 Gửi tin nhắn và cập nhật Redis
-exports.sendMessage = async (req, res) => {
-  try {
-    const { conversationId, senderId, type, content } = req.body;
+const parseBase64 = (base64String) => {
+  const matches = base64String.match(/^data:(.+);base64,(.+)$/);
+  if (!matches || matches.length !== 3) {
+    throw new Error('Invalid base64 string');
+  }
 
-    const newMessage = new Message({ conversationId, senderId, type, content });
+  const mimeType = matches[1]; // ví dụ: image/png
+  const base64Data = matches[2]; // phần sau dấu phẩy
+
+  const buffer = Buffer.from(base64Data, 'base64');
+  return { mimeType, buffer };
+};
+
+
+// 📌 Gửi tin nhắn và cập nhật Redis
+exports.sendMessage = async ({ conversationId, senderId, type, content, timestamp, isDeleted, isPinned, fileName, fileType }) => {
+  try {
+    let fileUrl = content;
+
+    if (['image', 'video', 'audio', 'file'].includes(type)) {
+      const isBase64 = typeof content === 'string' && content.startsWith('data:');
+      const isUrl = typeof content === 'string' && content.startsWith('http');
+
+      if (isBase64 && fileName && fileType) {
+        const { buffer } = parseBase64(content);
+        const cloudinaryResponse = await uploadToCloudinary(buffer, fileName, "chat_files");
+        fileUrl = cloudinaryResponse;
+      } else if (!isUrl) {
+        throw new Error("Invalid file upload: must be base64 or uploaded URL");
+      }
+    }
+
+    const newMessage = new Message({ conversationId, senderId, type, content: fileUrl, timestamp, isDeleted, isPinned });
     await newMessage.save();
 
     // Cập nhật Redis: Xóa cache tin nhắn cũ để tải lại tin mới nhất
@@ -155,11 +215,45 @@ exports.sendMessage = async (req, res) => {
     // Cập nhật danh sách cuộc trò chuyện gần đây của user
     await redisClient.zAdd(`recentChats:${senderId}`, { score: Date.now(), value: conversationId });
 
-    res.status(201).json(newMessage);
+    return newMessage;
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error sending message:', error);
+    // res.status(500).json({ error: error.message });
+    throw new Error(error.message);
   }
 };
+
+// // 📌 Gửi tin nhắn và cập nhật Redis
+// exports.sendMessage = async (req, res) => {
+//   try {
+//     const { conversationId, senderId, type, content, timestamp, isDeleted, isPinned } = req.body;
+//     let fileUrl = content;
+
+//     if(type === 'image' || type === 'file' || type === 'video' || type === 'audio'){
+//       const file = req.files?.file;
+//       if(file){
+//         const cloudinaryResponse = await uploadToCloudinary(file.data, "chat_files");
+//         fileUrl = cloudinaryResponse;
+//       } else {
+//         return res.status(400).json({ message: "No file uploaded" });
+//       }
+//     }
+
+//     const newMessage = new Message({ conversationId, senderId, type, content: fileUrl, timestamp, isDeleted, isPinned });
+//     await newMessage.save();
+
+//     // Cập nhật Redis: Xóa cache tin nhắn cũ để tải lại tin mới nhất
+//     await redisClient.del(`messages:${conversationId}`);
+
+//     // Cập nhật danh sách cuộc trò chuyện gần đây của user
+//     await redisClient.zAdd(`recentChats:${senderId}`, { score: Date.now(), value: conversationId });
+
+//     res.status(201).json(newMessage);
+//   } catch (error) {
+//     console.error('Error sending message:', error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
 
 // 📌 Lấy tin nhắn (tận dụng Redis cache)
 exports.getMessages = async (req, res) => {

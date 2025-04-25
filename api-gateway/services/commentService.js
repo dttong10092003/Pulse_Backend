@@ -33,4 +33,14 @@ const addReplyToComment = async (req, res) => {
   }
 };
 
-module.exports = { createComment, getCommentsByPost, addReplyToComment };
+const getCommentCountsByPosts = async (req, res) => {
+  try {
+    const response = await axios.post(`${CMT_SERVICE_URL}/comments/count-by-posts`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+};
+
+
+module.exports = { createComment, getCommentsByPost, addReplyToComment,getCommentCountsByPosts };
