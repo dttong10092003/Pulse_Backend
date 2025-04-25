@@ -42,6 +42,7 @@ services:
       - USER_SERVICE_URL=http://user-service:5002
       - JWT_SECRET=mySuperSecretKey12345!@#123
       - CLOUDINARY_URL=cloudinary://917723455993985:4sIKSFniroLohdzbPDk3nzfREzs@df2amyjzw
+      - USER_SERVICE_URL=http://user-service:5002
     depends_on:
       - mongo 
 

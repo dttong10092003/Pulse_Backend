@@ -47,4 +47,16 @@ const getUsersWhoLiked = async (req, res) => {
   }
 };
 
-module.exports = { likePost, unlikePost, getLikeCount, getUsersWhoLiked };
+const getUserLikedPosts = async (req, res) => {
+  
+    try {
+      const response = await axios.get(`${LIKE_SERVICE_URL}/likes/user-liked-posts`, {
+        headers: { Authorization: req.headers.authorization },
+      });
+      res.status(response.status).json(response.data);
+    } catch (error) {
+      res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+    }
+  }
+
+module.exports = { likePost, unlikePost, getLikeCount, getUsersWhoLiked, getUserLikedPosts };
