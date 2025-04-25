@@ -3,10 +3,10 @@ const { likePost, unlikePost, getLikeCount, getUsersWhoLiked, getUserLikedPosts 
 
 const router = express.Router();
 
+router.get('/user-liked-posts', getUserLikedPosts);
 router.post('/:postId', likePost);
 router.delete('/:postId', unlikePost);
 router.get('/count/:postId', getLikeCount);
 router.get('/:postId', getUsersWhoLiked);
-router.get('/user-liked-posts', getUserLikedPosts);
 
 module.exports = router;

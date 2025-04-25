@@ -38,6 +38,7 @@ io.on('connection', (socket) => {
   socket.on('send-comment', (data) => {
     console.log('📩 Received comment via socket:', data);
     io.emit(`receive-comment-${data.postId}`, data);
+    io.emit('newComment', { postId: data.postId });
   });
 
   socket.on('disconnect', () => {
