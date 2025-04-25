@@ -70,5 +70,15 @@ const getUsersWhoLiked = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+const getUserLikedPosts = async (req, res) => {
+    try {
+        const userId = verifyToken(req);
+        const likes = await Like.find({ userId }).select('postId');
+        const likedPostIds = likes.map((like) => like.postId.toString());
+        res.json({ likedPostIds });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
 
-module.exports = { likePost, unlikePost, getLikeCount, getUsersWhoLiked };
+module.exports = { likePost, unlikePost, getLikeCount, getUsersWhoLiked, getUserLikedPosts };
