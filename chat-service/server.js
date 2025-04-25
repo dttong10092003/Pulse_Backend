@@ -99,7 +99,7 @@ io.on('connection', (socket) => {
       await message.save();
 
       // Phát sự kiện cho tất cả các client trong phòng chat
-      io.to(conversationId).emit('messageRevoked', { messageId, senderId });
+      io.to(conversationId).emit('messageRevoked', { messageId, senderId, conversationId });
 
       console.log('✅ Message revoked and event emitted to room:', conversationId);
     } catch (error) {
@@ -123,7 +123,7 @@ io.on('connection', (socket) => {
       await message.deleteOne();
 
       // Phát sự kiện cho tất cả các client trong phòng chat
-      io.to(conversationId).emit('messageDeleted', { messageId, senderId });
+      io.to(conversationId).emit('messageDeleted', { messageId, senderId, conversationId });
 
       console.log('✅ Message deleted and event emitted to room:', conversationId);
     } catch (error) {
