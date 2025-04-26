@@ -69,42 +69,41 @@ const markManyAsRead = async (req, res) => {
 // ✅ Tạo thông báo mới
 const createNotification = async (req, res) => {
     try {
-      const {
-        type, receiverId, senderId,
-        messageContent, chatId,
-        postId, commentContent
-      } = req.body;
-  
-      if (!type || !receiverId || !senderId) {
-        return res.status(400).json({ message: 'Missing required fields' });
-      }
-  
-      if (!['message', 'like', 'comment', 'follow'].includes(type)) {
-        return res.status(400).json({ message: 'Invalid notification type' });
-      }
-  
-      const notification = new Notification({
-        type,
-        receiverId,
-        senderId,
-        messageContent,
-        chatId,
-        postId,
-        commentContent
-      });
-  
-      await notification.save();
-  
-      // 👉 Gửi realtime qua socket
-      const io = req.app.get("io");
-      io.to(receiverId).emit("new_notification", notification); // gửi nguyên bản ghi
-  
-      res.status(201).json({ message: 'Notification created', notification });
+        const {
+            type, receiverId, senderId,
+            messageContent, chatId,
+            postId, commentContent
+        } = req.body;
+
+        console.log(req.body);  // Kiểm tra dữ liệu đầu vào
+
+        if (!type || !receiverId || !senderId) {
+            return res.status(400).json({ message: 'Missing required fields' });
+        }
+
+        if (!['message', 'like', 'comment', 'follow'].includes(type)) {
+            return res.status(400).json({ message: 'Invalid notification type' });
+        }
+
+        const notification = new Notification({
+            type,
+            receiverId,
+            senderId,
+            messageContent,
+            chatId,
+            postId,
+            commentContent
+        });
+
+        await notification.save();
+
+        res.status(201).json({ message: 'Notification created', notification });
     } catch (err) {
-      res.status(500).json({ message: err.message });
+        console.error("Error creating notification: ", err);  // In chi tiết lỗi
+        res.status(500).json({ message: err.message });
     }
-  };
-  
+};
+
 
 module.exports = {
     getRecentNotifications,

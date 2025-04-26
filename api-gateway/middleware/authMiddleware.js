@@ -3,7 +3,9 @@ const axios = require("axios");
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL;
 
 const authenticateToken = async (req, res, next) => {
+  
   const authHeader = req.header("Authorization");
+  console.log("authHeader :", authHeader);
   const token = authHeader?.startsWith("Bearer ")
     ? authHeader.split(" ")[1]
     : authHeader;
