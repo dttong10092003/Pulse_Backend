@@ -18,4 +18,5 @@ router.post("/login/google", authService.loginGoogle); // dùng khi Login
 router.post("/change-password", authService.changePassword);
 router.post("/batch-usernames", authService.getBatchUsernames); // Lấy danh sách username từ danh sách userId
 router.get("/phone", authService.getPhoneNumber);
+
 module.exports = router;

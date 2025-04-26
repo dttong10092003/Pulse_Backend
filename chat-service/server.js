@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const axios = require('axios');
 require('dotenv').config();
 
+
 const messageRoutes = require('./routes/messageRoute');
 const conversationRoutes = require('./routes/conversationRoute');
 const redisClient = require('./config/redisClient');
@@ -350,3 +351,4 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5005;
 server.listen(PORT, () => console.log(`🚀 Chat Service running on port ${PORT}`));
+ 

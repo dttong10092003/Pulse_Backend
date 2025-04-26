@@ -185,23 +185,43 @@ const updateGroupConversation = async (req, res) => {
   }
 };
 
-const deleteMessage = async (req, res) => {
+const createOrGetPrivateConversation_App = async (req, res) => {
   try {
-    // Gửi yêu cầu đến chat-service để xóa tin nhắn
-    const response = await axios.post(`${CHAT_SERVICE_URL}/messages/delete`, req.body);
-    
-    // Trả về phản hồi từ chat-service
+    const response = await axios.post(`${CHAT_SERVICE_URL}/conversations/private_app`, req.body);
     res.status(response.status).json(response.data);
   } catch (error) {
     res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
   }
+}
+
+const deleteMessage = async (req, res) => {
+  try {
+    const response = await axios.post(`${CHAT_SERVICE_URL}/messages/delete`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || error.message,
+    });
+  }
 };
+
+const getUnreadCount = async (req, res) => {
+  try {
+    const response = await axios.get(`${CHAT_SERVICE_URL}/unread/${req.params.userId}`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || error.message,
+    });
+  }
+}
 
 module.exports = {
   updateGroupConversation,
   getAllConversations,
   checkUserOnline,
   createOrGetPrivateConversation,
+  createOrGetPrivateConversation_App,
   createGroupConversation,
   addMemberToGroup,
   removeMemberFromGroup,
@@ -216,5 +236,6 @@ module.exports = {
   getPinnedMessages,
   revokeMessage,
   unpinMessage,
-  deleteMessage,
+  getUnreadCount,
+  deleteMessage
 };

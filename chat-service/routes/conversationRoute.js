@@ -10,12 +10,15 @@ const {
   searchConversations,
   getAllConversations,
   updateGroupConversation,
+  createOrGetPrivateConversation_App,
 } = require('../controllers/conversationController');
 
 const router = express.Router();
 
 // 📌 Tạo hoặc lấy cuộc trò chuyện riêng tư (có tên hiển thị)
 router.post('/private', createOrGetPrivateConversation);
+router.post('/private_app', createOrGetPrivateConversation_App);
+
 
 router.get('/all/:userId', getAllConversations);
 // 📌 Tạo nhóm chat

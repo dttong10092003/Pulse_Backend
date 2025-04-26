@@ -277,3 +277,28 @@ exports.getMessages = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+
+
+// [GET] /chat/messages/unread/:userId
+exports.getUnreadCount = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const keys = await redisClient.keys(`unread:${userId}:*`);
+    const unread = {};
+
+    for (const key of keys) {
+      const parts = key.split(':');
+      const conversationId = parts[2];
+      const count = await redisClient.get(key);
+      unread[conversationId] = parseInt(count, 10);
+    }
+
+    res.status(200).json(unread); 
+  } catch (error) {
+    console.error('❌ Lỗi lấy số tin chưa đọc:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+

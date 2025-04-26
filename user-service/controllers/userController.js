@@ -255,7 +255,7 @@ const getTop10Users = async (req, res) => {
         // Lấy danh sách UserDetail
         const userDetails = await UserDetail.find(filter)
             .sort({ createdAt: -1 })
-            .limit(10)
+            .limit(15)
             .lean();
         if (!userDetails.length) {
             return res.status(404).json({ message: "No users found" });

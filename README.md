@@ -1,6 +1,6 @@
 # Pulse_Backend
 docker compose down
-docker compose up --build
+docker compose up --build follow-service chat-service api-gateway auth-service user-service 
 
 npm install nodemailer trong auth-service
 
