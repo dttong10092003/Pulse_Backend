@@ -8,6 +8,7 @@ router.get("/", postService.getPosts);
 router.delete("/:id", authenticateToken, postService.deletePost);
 router.get("/:id", postService.getPostById);
 router.get("/user/posts", postService.getUserPosts);
+router.put("/:id", authenticateToken, postService.editPost);
 
 
 module.exports = router;
