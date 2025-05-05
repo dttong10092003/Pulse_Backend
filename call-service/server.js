@@ -41,8 +41,10 @@ io.on("connection", (socket) => {
   });
 
   socket.on("endCall", ({ toUserId }) => {
+    console.log(`📴 Call ended, notifying ${toUserId}`);
     io.to(toUserId).emit("callEnded");
   });
+  
 
   socket.on("disconnect", () => {
     console.log(`❌ Client disconnected: ${socket.id}`);
