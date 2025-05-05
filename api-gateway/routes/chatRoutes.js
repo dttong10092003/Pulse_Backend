@@ -32,4 +32,12 @@ router.put('/conversations/group/update/:conversationId', authenticateToken, cha
 router.post('/messages/delete', authenticateToken, chatService.deleteMessage);
 router.get('/messages/unread/:userId', authenticateToken, chatService.getUnreadCount);
 
+// 📌 Deleted Conversations
+router.patch('/deleted-conversations/unread-count', authenticateToken, chatService.updateUnreadCount);
+router.patch('/deleted-conversations/deleted-at', authenticateToken, chatService.updateDeletedAt);
+router.get('/deleted-conversations/:userId', authenticateToken, chatService.getDeletedConversations);
+router.patch('/deleted-conversations/unread-count/increment', authenticateToken, chatService.incrementUnreadCount);
+
+
+
 module.exports = router;

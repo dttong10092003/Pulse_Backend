@@ -216,6 +216,53 @@ const getUnreadCount = async (req, res) => {
   }
 }
 
+const incrementUnreadCount = async (req, res) => {
+  try {
+    const response = await axios.patch(`${CHAT_SERVICE_URL}/deleted-conversations/unread-count/increment`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || error.message,
+    });
+  }
+};
+
+
+const updateUnreadCount = async (req, res) => {
+  try {
+    const response = await axios.patch(`${CHAT_SERVICE_URL}/deleted-conversations/unread-count`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || error.message,
+    });
+  }
+};
+
+const updateDeletedAt = async (req, res) => {
+  try {
+    const response = await axios.patch(`${CHAT_SERVICE_URL}/deleted-conversations/deleted-at`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || error.message,
+    });
+  }
+};
+
+
+const getDeletedConversations = async (req, res) => {
+  try {
+    const response = await axios.get(`${CHAT_SERVICE_URL}/deleted-conversations/${req.params.userId}`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || error.message,
+    });
+  }
+};
+
+
 module.exports = {
   updateGroupConversation,
   getAllConversations,
@@ -237,5 +284,10 @@ module.exports = {
   revokeMessage,
   unpinMessage,
   getUnreadCount,
-  deleteMessage
+  deleteMessage,
+  getDeletedConversations,
+  updateUnreadCount,
+  updateDeletedAt,
+  incrementUnreadCount,
+  
 };
