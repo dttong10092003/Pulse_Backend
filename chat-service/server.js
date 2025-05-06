@@ -4,6 +4,7 @@ const socketIo = require("socket.io");
 const mongoose = require("mongoose");
 const axios = require("axios");
 require("dotenv").config();
+const cors = require('cors');
 
 const messageRoutes = require("./routes/messageRoute");
 const conversationRoutes = require("./routes/conversationRoute");
@@ -23,6 +24,8 @@ const io = socketIo(server, {
 });
 
 app.use(express.json());
+
+app.use(cors());
 
 // Kết nối MongoDB
 mongoose
