@@ -149,4 +149,54 @@ const getPostsByUser = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
-module.exports = { createPost, getAllPosts, getPostById, deletePost, getPostsByUser };
+// Sửa bài viết (Yêu cầu đăng nhập & chỉ chủ sở hữu mới chỉnh sửa được)
+const editPost = async (req, res) => {
+    try {
+      const userId = verifyToken(req);
+      const { content, media } = req.body;
+  
+      const post = await Post.findById(req.params.id);
+      if (!post) return res.status(404).json({ message: 'Post not found' });
+  
+      if (post.userId.toString() !== userId) {
+        return res.status(403).json({ message: 'Forbidden: You can only edit your own posts' });
+      }
+  
+      if (Array.isArray(media)) {
+        // Xác định media nào là đã có sẵn (URL Cloudinary) và media nào là base64 mới upload
+        const newMedia = [];
+        const existingMedia = [];
+  
+        for (const item of media) {
+          if (item.startsWith('data:')) {
+            newMedia.push(item); // base64 cần upload
+          } else {
+            existingMedia.push(item); // URL đã upload rồi
+          }
+        }
+  
+        // Nếu có file base64 thì upload
+        let uploadedMedia = [];
+        if (newMedia.length > 0) {
+          uploadedMedia = await Promise.all(
+            newMedia.map((fileBase64) => uploadToCloudinary(fileBase64, 'posts'))
+          );
+        }
+  
+        // Media cuối cùng = file đã có + file mới upload
+        post.media = [...existingMedia, ...uploadedMedia];
+      }
+  
+      if (content) post.content = content;
+  
+      await post.save();
+  
+      res.json({ message: 'Post updated successfully', post });
+    } catch (err) {
+      console.error("❌ editPost error:", err);
+      res.status(err.status || 500).json({ message: err.message });
+    }
+  };
+  
+
+module.exports = { createPost, getAllPosts, getPostById, deletePost, getPostsByUser, editPost };

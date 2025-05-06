@@ -1,44 +1,36 @@
-const express = require('express');
-const http = require('http');
-const socketIO = require('socket.io');
-const cors = require('cors');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 
 const app = express();
-app.use(cors());
-
 const server = http.createServer(app);
-const io = socketIO(server, {
+const io = new Server(server, {
   cors: {
-    origin: '*', // FE URL hoặc '*'
-    methods: ['GET', 'POST']
+    origin: "*",
+    methods: ["GET", "POST"]
   }
 });
 
-io.on('connection', (socket) => {
-  console.log(`✅ Client connected: ${socket.id}`);
+io.on("connection", (socket) => {
+  console.log("👤 User connected:", socket.id);
 
-  socket.on('join', ({ userId }) => {
-    socket.join(userId); // tạo phòng cho mỗi user
-    console.log(`${userId} đã tham gia phòng`);
+  socket.on("call-user", ({ targetId, offer }) => {
+    io.to(targetId).emit("incoming-call", { from: socket.id, offer });
   });
 
-  socket.on('call-user', ({ to, offer }) => {
-    socket.to(to).emit('incoming-call', { from: socket.id, offer });
+  socket.on("answer-call", ({ to, answer }) => {
+    io.to(to).emit("call-answered", { from: socket.id, answer });
   });
 
-  socket.on('answer-call', ({ to, answer }) => {
-    socket.to(to).emit('call-answered', { answer });
+  socket.on("ice-candidate", ({ to, candidate }) => {
+    io.to(to).emit("ice-candidate", { from: socket.id, candidate });
   });
 
-  socket.on('ice-candidate', ({ to, candidate }) => {
-    socket.to(to).emit('ice-candidate', { candidate });
-  });
-
-  socket.on('disconnect', () => {
-    console.log(`❌ Disconnected: ${socket.id}`);
+  socket.on("disconnect", () => {
+    console.log("❌ User disconnected:", socket.id);
   });
 });
 
-server.listen(8000, () => {
-  console.log('🚀 Signaling server listening on port 8000');
+server.listen(7000, () => {
+  console.log("🚀 Signaling server running at http://localhost:7000");
 });

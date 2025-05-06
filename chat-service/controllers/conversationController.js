@@ -3,6 +3,7 @@ const Conversation = require('../models/conversation');
 const redisClient = require('../config/redisClient');
 const axios = require('axios');
 const Message = require('../models/message');
+const DeletedConversation = require('../models/deletedConversation');
 
 // 📌 Kiểm tra trạng thái online của user
 exports.checkUserOnline = async (req, res) => {
@@ -23,11 +24,17 @@ exports.getAllConversations = async (req, res) => {
 
     const userObjectId = new mongoose.Types.ObjectId(userId);
 
+    // 🔸 Lấy danh sách các cuộc trò chuyện đã bị xóa bởi user này
+    const deletedConversations = await DeletedConversation.find({ userId });
+    const deletedMap = deletedConversations.reduce((acc, del) => {
+      acc[del.conversationId.toString()] = del;
+      return acc;
+    }, {});
+
     const conversations = await Conversation.find({
       members: { $in: [userObjectId] },  // Lọc các cuộc trò chuyện mà user tham gia
     });
 
-    /////
     if (!conversations.length) {
       return res.json([]);
     }
@@ -58,16 +65,23 @@ exports.getAllConversations = async (req, res) => {
 
     // 🔹 Gán thông tin members và lấy tin nhắn
     const updatedConversations = await Promise.all(conversations.map(async (conversation) => {
-      conversation = conversation.toObject(); // Chuyển Mongoose document thành object
+      // conversation = conversation.toObject(); // Chuyển Mongoose document thành object
+      const conversationObj = conversation.toObject();
+      const convIdStr = conversation._id.toString();
 
       // Thay thế members từ ObjectId sang object chứa thông tin user
-      conversation.members = conversation.members.map(userId => userMap[userId.toString()] || { userId, name: 'Unknown', avatar: '' });
+      conversationObj.members = conversation.members.map(userId => userMap[userId.toString()] || { userId, name: 'Unknown', avatar: '' });
+
+      let messageFilter = { conversationId: conversation._id };
+
+      if (deletedMap[convIdStr]) {
+        messageFilter.timestamp = { $gt: deletedMap[convIdStr].deletedAt };
+      }
 
       // Lấy tin nhắn gần nhất
-      const messages = await Message.find({ conversationId: conversation._id })
-        .sort({ timestamp: 1 });
+      const messages = await Message.find(messageFilter).sort({ timestamp: 1 });
 
-      conversation.messages = messages.map(msg => {
+      conversationObj.messages = messages.map(msg => {
         const senderInfo = userMap[msg.senderId.toString()] || { name: 'Unknown', avatar: '' };
 
         return {
@@ -84,7 +98,9 @@ exports.getAllConversations = async (req, res) => {
         };
       });
 
-      return conversation;
+      conversationObj.unreadCount = deletedMap[convIdStr]?.unreadCount || 0;
+
+      return conversationObj;
     }));
 
     res.json(updatedConversations);
@@ -119,6 +135,44 @@ exports.createOrGetPrivateConversation = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.createOrGetPrivateConversation_App = async (req, res) => {
+  try {
+    // ✅ Tự giải mã token
+    const authHeader = req.header("Authorization");
+    const token = authHeader?.split(" ")[1];
+
+    if (!token) return res.status(401).json({ message: "Token required" });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user1 = decoded.userId; // 🔥 Lấy userId trực tiếp từ token
+    const user2 = req.body.user2;
+
+    if (!user2 || user1 === user2) {
+      return res.status(400).json({ message: "Invalid user selection" });
+    }
+
+    // ✅ Tìm hoặc tạo cuộc trò chuyện giữa 2 người
+    let conversation = await Conversation.findOne({
+      isGroup: false,
+      members: { $all: [user1, user2], $size: 2 },
+    });
+
+    if (!conversation) {
+      conversation = new Conversation({
+        isGroup: false,
+        members: [user1, user2],
+      });
+      await conversation.save();
+    }
+
+    res.status(200).json(conversation);
+  } catch (err) {
+    console.error("❌ Error creating conversation:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 
 // 📌 Tạo nhóm chat
 exports.createGroupConversation = async (req, res) => {

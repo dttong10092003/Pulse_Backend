@@ -1,10 +1,11 @@
+
 const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema({
     type: { 
         type: String, 
         required: true, 
-        enum: ['message', 'like', 'comment'] 
+        enum: ['message', 'like', 'comment', 'follow'] // ➕ thêm 'follow'
     },
 
     receiverId: { type: String, required: true },   // Người nhận thông báo
@@ -21,6 +22,6 @@ const notificationSchema = new mongoose.Schema({
     isRead: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 });
-
 const Notification = mongoose.model('Notification', notificationSchema);
+
 module.exports = Notification;

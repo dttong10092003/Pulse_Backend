@@ -6,6 +6,8 @@ const router = express.Router();
 // 📌 Conversations
 router.get('/conversations/all/:userId', authenticateToken, chatService.getAllConversations);
 router.post('/conversations/private', authenticateToken, chatService.createOrGetPrivateConversation);
+router.post('/conversations/private_app', chatService.createOrGetPrivateConversation_App);
+
 router.post('/conversations/group', authenticateToken, chatService.createGroupConversation);
 router.post('/conversations/group/addMember', authenticateToken, chatService.addMemberToGroup);
 router.post('/conversations/group/removeMember', authenticateToken, chatService.removeMemberFromGroup);
@@ -28,5 +30,14 @@ router.post('/messages/revoke', authenticateToken, chatService.revokeMessage);
 
 router.put('/conversations/group/update/:conversationId', authenticateToken, chatService.updateGroupConversation); // Thêm route này
 router.post('/messages/delete', authenticateToken, chatService.deleteMessage);
+router.get('/messages/unread/:userId', authenticateToken, chatService.getUnreadCount);
+
+// 📌 Deleted Conversations
+router.patch('/deleted-conversations/unread-count', authenticateToken, chatService.updateUnreadCount);
+router.patch('/deleted-conversations/deleted-at', authenticateToken, chatService.updateDeletedAt);
+router.get('/deleted-conversations/:userId', authenticateToken, chatService.getDeletedConversations);
+router.patch('/deleted-conversations/unread-count/increment', authenticateToken, chatService.incrementUnreadCount);
+
+
 
 module.exports = router;

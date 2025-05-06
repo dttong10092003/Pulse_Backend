@@ -65,7 +65,8 @@ const markManyAsRead = async (req, res) => {
     }
 };
 
-// ✅ Tạo thông báo
+
+// ✅ Tạo thông báo mới
 const createNotification = async (req, res) => {
     try {
         const {
@@ -74,11 +75,13 @@ const createNotification = async (req, res) => {
             postId, commentContent
         } = req.body;
 
+        console.log(req.body);  // Kiểm tra dữ liệu đầu vào
+
         if (!type || !receiverId || !senderId) {
             return res.status(400).json({ message: 'Missing required fields' });
         }
 
-        if (!['message', 'like', 'comment'].includes(type)) {
+        if (!['message', 'like', 'comment', 'follow'].includes(type)) {
             return res.status(400).json({ message: 'Invalid notification type' });
         }
 
@@ -93,11 +96,14 @@ const createNotification = async (req, res) => {
         });
 
         await notification.save();
+
         res.status(201).json({ message: 'Notification created', notification });
     } catch (err) {
+        console.error("Error creating notification: ", err);  // In chi tiết lỗi
         res.status(500).json({ message: err.message });
     }
 };
+
 
 module.exports = {
     getRecentNotifications,
