@@ -10,7 +10,8 @@ app.use(cors());
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
-    origin: "*",
+    // origin: "*", sửa thành link tại vì render không cho phép *
+    origin: ["https://testz-six.vercel.app"],
     methods: ["GET", "POST"],
   },
 });
