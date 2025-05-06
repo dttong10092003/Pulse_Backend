@@ -20,8 +20,13 @@ const { parseBase64 } = require("./utils/parseBase64");
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
-  cors: { origin: "*" },
+  cors: {
+    origin: ["http://localhost:4000", "https://pulse-azure.vercel.app/"],
+    methods: ["GET", "POST"],
+    credentials: true
+  }
 });
+
 
 app.use(express.json());
 
