@@ -7,10 +7,11 @@ require("dotenv").config();
 
 const messageRoutes = require("./routes/messageRoute");
 const conversationRoutes = require("./routes/conversationRoute");
-const deletedConversationRoutes = require('./routes/deletedConversationRoutes');
+const deletedConversationRoutes = require("./routes/deletedConversationRoutes");
 const redisClient = require("./config/redisClient");
 const Message = require("./models/message");
 const Conversation = require("./models/conversation");
+const DeletedConversation = require("./models/deletedConversation");
 const { sendMessage } = require("./controllers/messageController");
 const { uploadToCloudinary } = require("./utils/cloudinary");
 const { parseBase64 } = require("./utils/parseBase64");
@@ -31,7 +32,7 @@ mongoose
 
 app.use("/messages", messageRoutes);
 app.use("/conversations", conversationRoutes);
-app.use('/deleted-conversations', deletedConversationRoutes);
+app.use("/deleted-conversations", deletedConversationRoutes);
 
 // Socket.io xử lý real-time
 io.on("connection", (socket) => {
@@ -264,6 +265,9 @@ io.on("connection", (socket) => {
       );
       await conversation.save();
 
+      // Xóa DeletedConversation
+      await DeletedConversation.deleteOne({ userId, conversationId });
+
       // Emit cho tất cả thành viên trong phòng biết ai đã rời nhóm
       io.to(conversationId).emit("memberLeft", {
         conversationId,
@@ -285,6 +289,12 @@ io.on("connection", (socket) => {
         (id) => id.toString() !== userIdToRemove
       );
       await conversation.save();
+
+      // Xóa DeletedConversation
+      await DeletedConversation.deleteOne({
+        userId: userIdToRemove,
+        conversationId,
+      });
 
       // Emit tới tất cả các user trong room
       io.to(conversationId).emit("memberRemoved", {
@@ -310,7 +320,7 @@ io.on("connection", (socket) => {
         newAdminId,
       });
     } catch (error) {
-      console.error('Error in transferAdmin:', error);
+      console.error("Error in transferAdmin:", error);
     }
   });
 
