@@ -104,6 +104,7 @@ services:
       - MONGODB_URI=mongodb+srv://follow:follow@follow.r3ypo.mongodb.net/?retryWrites=true&w=majority&appName=follow
       - JWT_SECRET=mySuperSecretKey12345!@#123
       - USER_SERVICE_URL=http://user-service:5002
+      - AUTH_SERVICE_URL=http://auth-service:5000
     depends_on:
       - mongo
       - auth-service
