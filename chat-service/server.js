@@ -21,7 +21,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: ["http://localhost:4000", "https://pulse-azure.vercel.app/"],
+    origin: ["http://localhost:4000", "https://pulse-azure.vercel.app"],
     methods: ["GET", "POST"],
     credentials: true
   }
