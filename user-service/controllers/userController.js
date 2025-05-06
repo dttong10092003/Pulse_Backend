@@ -328,13 +328,11 @@ const getTopUsersExcludingFollowed = async (req, res) => {
             return res.status(400).json({ message: "Invalid excludeUserId" });
         }
 
-        // Gọi follow-service để lấy danh sách người đã follow
         const followRes = await axios.get(`${FOLLOW_SERVICE_URL}/follow/followings/${excludeUserId}`);
         const followings = followRes.data?.data || [];
 
-        const followingIds = followings.map(f => f.user._id); // hoặc f.followingId tuỳ backend trả về
+        const followingIds = followings.map(f => f.user._id);
 
-        // Lọc user chưa bị follow và không phải chính mình
         const userDetails = await UserDetail.find({
             userId: {
                 $ne: new mongoose.Types.ObjectId(excludeUserId),
@@ -344,10 +342,12 @@ const getTopUsersExcludingFollowed = async (req, res) => {
 
         const userIds = userDetails.map((u) => u.userId);
 
-        const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, {
-            userIds,
-        });
+        // Nếu không có user nào => return luôn
+        if (userIds.length === 0) {
+            return res.status(200).json([]);  // Trả về mảng rỗng thay vì gọi auth-service
+        }
 
+        const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, { userIds });
         const userMap = authResponse.data;
 
         const result = userDetails.map((detail) => ({
@@ -361,9 +361,8 @@ const getTopUsersExcludingFollowed = async (req, res) => {
         return res.status(200).json(result);
     } catch (error) {
         console.error("❌ Error in getTopUsersExcludingFollowed:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        return res.status(500).json({ message: "Failed to fetch suggested users." });
     }
 };
-
 
 module.exports = { getTopUsersExcludingFollowed, getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users, getUserDetails };

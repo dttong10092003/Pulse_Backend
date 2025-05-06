@@ -4,7 +4,7 @@ const replySchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, required: true },
     text: { type: String, required: true },
     timestamp: { type: Date, default: Date.now }
-});
+  }, { _id: true });
 
 const commentSchema = new mongoose.Schema({
     postId: { type: mongoose.Schema.Types.ObjectId, required: true },

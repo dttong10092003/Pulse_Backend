@@ -3,7 +3,6 @@ const Comment = require('../models/comment');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL;
-const mongoose = require('mongoose');
 
 // Middleware verify token (gọn, dùng riêng trong service)
 const verifyToken = (req) => {
@@ -34,52 +33,124 @@ const createComment = async (req, res) => {
 };
 
 // GET /comments/:postId
+// const getCommentsByPost = async (req, res) => {
+//     try {
+//       const comments = await Comment.find({ postId: req.params.postId }).sort({ createdAt: -1 });
+  
+//       if (comments.length === 0) {
+//         return res.json([]); // Không cần gọi user-service
+//       }
+  
+//       const userIds = [...new Set(comments.map(c => c.userId?.toString()).filter(Boolean))];
+  
+//       if (userIds.length === 0) {
+//         return res.json(comments); // Có comment nhưng không có userId
+//       }
+  
+//       const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
+//         userIds
+//       });
+  
+//       const userList = userRes.data;
+//       const userMap = {};
+//       userList.forEach(user => {
+//         userMap[user.userId.toString()] = user;
+//       });
+  
+//       const commentsWithUserInfo = comments.map(comment => {
+//         const user = userMap[comment.userId?.toString()];
+//         return {
+//           ...comment.toObject(),
+//           user: {
+//             firstname: user?.firstname || "Ẩn",
+//             lastname: user?.lastname || "Danh",
+//             avatar: user?.avatar || "https://i.postimg.cc/7Y7ypVD2/avatar-mac-dinh.jpg"
+//           }
+//         };
+//       });
+  
+//       res.json(commentsWithUserInfo);
+//     } catch (err) {
+//       console.error("❌ getCommentsByPost failed:", err.message);
+//       res.status(500).json({ message: err.message });
+//     }
+//   };
+  
+  
 const getCommentsByPost = async (req, res) => {
-    try {
-      const comments = await Comment.find({ postId: req.params.postId }).sort({ createdAt: -1 });
-  
-      if (comments.length === 0) {
-        return res.json([]); // Không cần gọi user-service
-      }
-  
-      const userIds = [...new Set(comments.map(c => c.userId?.toString()).filter(Boolean))];
-  
-      if (userIds.length === 0) {
-        return res.json(comments); // Có comment nhưng không có userId
-      }
-  
-      const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
-        userIds
-      });
-  
-      const userList = userRes.data;
-      const userMap = {};
-      userList.forEach(user => {
-        userMap[user.userId.toString()] = user;
-      });
-  
-      const commentsWithUserInfo = comments.map(comment => {
-        const user = userMap[comment.userId?.toString()];
-        return {
-          ...comment.toObject(),
-          user: {
-            firstname: user?.firstname || "Ẩn",
-            lastname: user?.lastname || "Danh",
-            avatar: user?.avatar || "https://i.postimg.cc/7Y7ypVD2/avatar-mac-dinh.jpg"
-          }
-        };
-      });
-  
-      res.json(commentsWithUserInfo);
-    } catch (err) {
-      console.error("❌ getCommentsByPost failed:", err.message);
-      res.status(500).json({ message: err.message });
-    }
-  };
-  
-  
+  try {
+    const comments = await Comment.find({ postId: req.params.postId }).sort({ createdAt: -1 });
+
+    if (comments.length === 0) return res.json([]);
+
+    const commentUserIds = comments.map(c => c.userId?.toString()).filter(Boolean);
+    const replyUserIds = comments.flatMap(c =>
+      c.replies?.map(r => r.userId?.toString()).filter(Boolean) || []
+    );
+
+    const allUserIds = [...new Set([...commentUserIds, ...replyUserIds])];
+
+    if (allUserIds.length === 0) return res.json(comments);
+
+    const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
+      userIds: allUserIds,
+    });
+
+    const userList = userRes.data;
+    const userMap = {};
+    userList.forEach(user => {
+      userMap[user.userId.toString()] = user;
+    });
+
+    const commentsWithUserInfo = comments.map(comment => {
+      const user = userMap[comment.userId?.toString()];
+      const commentWithUser = {
+        ...comment.toObject(),
+        user: {
+          firstname: user?.firstname || "Ẩn",
+          lastname: user?.lastname || "Danh",
+          avatar: user?.avatar || "https://i.postimg.cc/7Y7ypVD2/avatar-mac-dinh.jpg",
+        },
+        replies: comment.replies?.map(reply => {
+          const replyUser = userMap[reply.userId?.toString()];
+          return {
+            ...reply,
+            user: {
+              firstname: replyUser?.firstname || "Ẩn",
+              lastname: replyUser?.lastname || "Danh",
+              avatar: replyUser?.avatar || "https://i.postimg.cc/7Y7ypVD2/avatar-mac-dinh.jpg",
+            },
+          };
+        }) || [],
+      };
+
+      return commentWithUser;
+    });
+
+    res.json(commentsWithUserInfo);
+  } catch (err) {
+    console.error("❌ getCommentsByPost failed:", err.message);
+    res.status(500).json({ message: err.message });
+  }
+};
 
 // POST /comments/reply/:commentId
+// const addReplyToComment = async (req, res) => {
+//   try {
+//     const userId = verifyToken(req);
+//     const { text } = req.body;
+//     const comment = await Comment.findById(req.params.commentId);
+//     if (!comment) {
+//       return res.status(404).json({ message: 'Comment not found' });
+//     }
+//     comment.replies.push({ userId, text, timestamp: new Date() });
+//     comment.updatedAt = new Date();
+//     await comment.save();
+//     res.status(201).json({ message: 'Reply added successfully', comment });
+//   } catch (err) {
+//     res.status(err.status || 500).json({ message: err.message });
+//   }
+// };
 const addReplyToComment = async (req, res) => {
   try {
     const userId = verifyToken(req);
@@ -88,11 +159,33 @@ const addReplyToComment = async (req, res) => {
     if (!comment) {
       return res.status(404).json({ message: 'Comment not found' });
     }
-    comment.replies.push({ userId, text, timestamp: new Date() });
+
+    const reply = { userId, text, timestamp: new Date() };
+    comment.replies.push(reply);
     comment.updatedAt = new Date();
     await comment.save();
-    res.status(201).json({ message: 'Reply added successfully', comment });
+
+    const lastReply = comment.replies[comment.replies.length - 1]; // ✅ reply vừa thêm
+
+    // Lấy thông tin user cho reply
+    const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
+      userIds: [userId]
+    });
+
+    const user = userRes.data[0];
+
+    const replyWithUser = {
+      ...lastReply.toObject(), // cần toObject để đảm bảo có _id
+      user: {
+        firstname: user?.firstname || "Ẩn",
+        lastname: user?.lastname || "Danh",
+        avatar: user?.avatar || "https://i.postimg.cc/7Y7ypVD2/avatar-mac-dinh.jpg"
+      }
+    };
+
+    res.status(201).json({ message: 'Reply added successfully', reply: replyWithUser });
   } catch (err) {
+    console.error("❌ addReplyToComment failed:", err.message);
     res.status(err.status || 500).json({ message: err.message });
   }
 };
