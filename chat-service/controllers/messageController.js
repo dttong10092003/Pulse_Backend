@@ -209,15 +209,15 @@ exports.sendMessage = async ({ conversationId, senderId, type, content, timestam
     const newMessage = new Message({ conversationId, senderId, type, content: fileUrl, timestamp, isDeleted, isPinned });
     await newMessage.save();
 
-    try{
-      // Cập nhật Redis: Xóa cache tin nhắn cũ để tải lại tin mới nhất
-    await redisClient.del(`messages:${conversationId}`);
+    // try{
+    //   // Cập nhật Redis: Xóa cache tin nhắn cũ để tải lại tin mới nhất
+    // await redisClient.del(`messages:${conversationId}`);
 
-    // Cập nhật danh sách cuộc trò chuyện gần đây của user
-    await redisClient.zAdd(`recentChats:${senderId}`, { score: Date.now(), value: conversationId });
-    } catch (redisError) {
-      console.warn('⚠️ Redis error:', redisError.message);
-    }
+    // // Cập nhật danh sách cuộc trò chuyện gần đây của user
+    // await redisClient.zAdd(`recentChats:${senderId}`, { score: Date.now(), value: conversationId });
+    // } catch (redisError) {
+    //   console.warn('⚠️ Redis error:', redisError.message);
+    // }
     
 
     return newMessage;
