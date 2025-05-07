@@ -8,7 +8,7 @@ const getAllNotifications = async (req, res) => {
     const { userId } = req.query;
     if (!userId) return res.status(400).json({ message: "Missing userId" });
 
-    const response = await axios.get(`${NOTIFICATION_SERVICE_URL}/noti/ListNotification?userId=${userId}`);
+    const response = await axios.get(`${NOTIFICATION_SERVICE_URL}/noti/get-all?userId=${userId}`);
     res.status(response.status).json(response.data);
   } catch (error) {
     console.error("❌ Error in getAllNotifications:", error.message);
@@ -16,19 +16,7 @@ const getAllNotifications = async (req, res) => {
   }
 };
 
-// ✅ GET /noti/recent?userId=...
-const getRecentNotifications = async (req, res) => {
-  try {
-    const { userId } = req.query;
-    if (!userId) return res.status(400).json({ message: "Missing userId" });
 
-    const response = await axios.get(`${NOTIFICATION_SERVICE_URL}/noti/ListRecent?userId=${userId}`);
-    res.status(response.status).json(response.data);
-  } catch (error) {
-    console.error("❌ Error in getRecentNotifications:", error.message);
-    res.status(error.response?.status || 500).json({ message: error.message });
-  }
-};
 
 // ✅ PATCH /noti/markOne/:id  (body: { userId })
 const markOneAsRead = async (req, res) => {
@@ -36,7 +24,7 @@ const markOneAsRead = async (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ message: "Missing userId" });
 
-    const response = await axios.patch(`${NOTIFICATION_SERVICE_URL}/noti/MarkOne/${req.params.id}`, { userId });
+    const response = await axios.patch(`${NOTIFICATION_SERVICE_URL}/noti/read-one/${req.params.id}`, { userId });
     res.status(response.status).json(response.data);
   } catch (error) {
     console.error("❌ Error in markOneAsRead:", error.message);
@@ -52,7 +40,7 @@ const markManyAsRead = async (req, res) => {
       return res.status(400).json({ message: "Missing ids or userId" });
     }
 
-    const response = await axios.patch(`${NOTIFICATION_SERVICE_URL}/noti/MarkMany`, { ids, userId });
+    const response = await axios.patch(`${NOTIFICATION_SERVICE_URL}/noti/read-all`, { ids, userId });
     res.status(response.status).json(response.data);
   } catch (error) {
     console.error("❌ Error in markManyAsRead:", error.message);
@@ -65,7 +53,7 @@ const createNotification = async (req, res) => {
   try {
     const payload = req.body;
 
-    const response = await axios.post(`${NOTIFICATION_SERVICE_URL}/noti/Create`, payload);
+    const response = await axios.post(`${NOTIFICATION_SERVICE_URL}/noti/create`, payload);
     res.status(response.status).json(response.data);
   } catch (error) {
     console.error("❌ Error in createNotification:", error.message);
@@ -75,7 +63,6 @@ const createNotification = async (req, res) => {
 
 module.exports = {
   getAllNotifications,
-  getRecentNotifications,
   markOneAsRead,
   markManyAsRead,
   createNotification,
