@@ -2,6 +2,7 @@ const Follow = require('../models/follow');
 const axios = require('axios');
 const mongoose = require('mongoose');
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL;
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL;
 
 // Follow người dùng khác
 const followUser = async (req, res) => {
@@ -126,7 +127,10 @@ const getFollowings = async (req, res) => {
   }
 
   try {
-    const followings = await Follow.find({ followerId: userId });
+    const followings = await Follow.find({
+      followerId: userId,
+      followingId: { $ne: userId }  // ❗ loại bỏ trường hợp self-follow
+    });
 
     if (!followings || followings.length === 0) {
       return res.status(200).json({ message: 'No followings found.', data: [] });
@@ -143,16 +147,24 @@ const getFollowings = async (req, res) => {
       userMap[user.userId] = user;
     });
 
-    const formatted = followings.map(f => ({
-      _id: f._id,
-      user: {
-        _id: f.followingId,
-        firstname: userMap[f.followingId.toString()]?.firstname || '',
-        lastname: userMap[f.followingId.toString()]?.lastname || '',
-        avatar: userMap[f.followingId.toString()]?.avatar || '',
-      },
-      createdAt: f.createdAt
-    }));
+    const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, {
+      userIds: followingIds,
+    });
+    const usernameMap = authResponse.data;
+
+    const formatted = followings
+    .filter(f => f.followerId.toString() !== f.followingId.toString())
+      .map(f => ({
+        _id: f._id,
+        user: {
+          _id: f.followingId,
+          firstname: userMap[f.followingId.toString()]?.firstname || '',
+          lastname: userMap[f.followingId.toString()]?.lastname || '',
+          avatar: userMap[f.followingId.toString()]?.avatar || '',
+          username: usernameMap[f.followingId.toString()] || '',
+        },
+        createdAt: f.createdAt
+      }));
 
     return res.status(200).json({
       message: 'Followings retrieved successfully.',
