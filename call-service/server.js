@@ -8,13 +8,21 @@ const app = express();
 app.use(cors());
 
 const server = http.createServer(app);
-const io = socketIO(server, {
+// const io = socketIO(server, {
+//   cors: {
+//     origin: "*", //sửa thành link tại vì render không cho phép *
+//     // origin: ["https://testz-six.vercel.app"],
+//     methods: ["GET", "POST"],
+//   },
+// });
+const io = socketIo(server, {
   cors: {
-    origin: "*", //sửa thành link tại vì render không cho phép *
-    // origin: ["https://testz-six.vercel.app"],
+    origin: ["http://localhost:4000", "https://pulse-azure.vercel.app"],
     methods: ["GET", "POST"],
-  },
+    credentials: true
+  }
 });
+ 
 
 io.on("connection", (socket) => {
   console.log(`📡 Client connected: ${socket.id}`);
