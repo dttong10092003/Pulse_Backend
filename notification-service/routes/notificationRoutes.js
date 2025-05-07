@@ -1,19 +1,18 @@
 const express = require('express');
-const router = express.Router();
 const {
-    getRecentNotifications,
-    getAllNotifications,
-    markOneAsRead,
-    markManyAsRead,
-    createNotification
+  sendNotification,
+  getAllNotifications,
+  markOneAsRead,
+  markManyAsRead
 } = require('../controllers/notificationController');
 
+module.exports = (io, userSocketMap) => {
+  const router = express.Router();
 
-// Danh sách route
-router.get('/noti/ListRecent', getRecentNotifications);       // 10 thông báo gần nhất
-router.get('/noti/ListNotification', getAllNotifications);    // tất cả thông báo
-router.patch('/noti/MarkOne/:id', markOneAsRead);             // đánh dấu 1 cái
-router.patch('/noti/MarkMany', markManyAsRead);               // đánh dấu nhiều cái
-router.post('/noti/Create', createNotification);              // tạo thông báo mới
+  router.post('/create', sendNotification(io, userSocketMap)); // Gửi notification
+  router.get('/get-all', getAllNotifications);           // ✅ Lấy all thông báo
+  router.patch('/read-one/:id', markOneAsRead);           // ✅ Đánh dấu 1 đã đọc
+  router.patch('/read-all', markManyAsRead);              // ✅ Đánh dấu nhiều đã đọc
 
-module.exports = router;
+  return router;
+};

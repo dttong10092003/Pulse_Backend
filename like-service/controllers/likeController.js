@@ -15,6 +15,7 @@ const verifyToken = (req) => {
     }
 };
 
+// like 1 bài post
 const likePost = async (req, res) => {
     try {
         const userId = verifyToken(req);
@@ -34,6 +35,7 @@ const likePost = async (req, res) => {
     }
 };
 
+// unlike 1 bài post
 const unlikePost = async (req, res) => {
     try {
         const userId = verifyToken(req);
@@ -51,6 +53,8 @@ const unlikePost = async (req, res) => {
     }
 };
 
+
+// lấy số lượng like của 1 bài post
 const getLikeCount = async (req, res) => {
     try {
         const postId = req.params.postId;
@@ -61,6 +65,7 @@ const getLikeCount = async (req, res) => {
     }
 };
 
+// lấy danh sách người đã like 1 bài post
 const getUsersWhoLiked = async (req, res) => {
     try {
         const postId = req.params.postId;
@@ -70,6 +75,8 @@ const getUsersWhoLiked = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+// lấy danh sách bài post mà user đã like
 const getUserLikedPosts = async (req, res) => {
     try {
         const userId = verifyToken(req);
