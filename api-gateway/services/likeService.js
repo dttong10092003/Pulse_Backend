@@ -29,14 +29,7 @@ const unlikePost = async (req, res) => {
   }
 };
 
-const getLikeCount = async (req, res) => {
-  try {
-    const response = await axios.get(`${LIKE_SERVICE_URL}/likes/count/${req.params.postId}`);
-    res.status(response.status).json(response.data);
-  } catch (error) {
-    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
-  }
-};
+
 
 const getUsersWhoLiked = async (req, res) => {
   try {
