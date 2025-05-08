@@ -62,4 +62,4 @@ const getUserLikedPosts = async (req, res) => {
     }
   };
   
-module.exports = { likePost, unlikePost, getLikeCount, getUsersWhoLiked, getUserLikedPosts, getLikeCountsByPosts };
+module.exports = { likePost, unlikePost, getUsersWhoLiked, getUserLikedPosts, getLikeCountsByPosts };
