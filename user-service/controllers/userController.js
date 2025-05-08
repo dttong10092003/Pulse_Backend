@@ -329,6 +329,7 @@ const getTopUsersExcludingFollowed = async (req, res) => {
         }
 
         const followRes = await axios.get(`${FOLLOW_SERVICE_URL}/follow/followings/${excludeUserId}`);
+
         const followings = followRes.data?.data || [];
 
         const followingIds = followings.map(f => f.user._id);
