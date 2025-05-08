@@ -86,15 +86,16 @@ const getCommentsByPost = async (req, res) => {
         },
         replies: comment.replies?.map(reply => {
           const replyUser = userMap[reply.userId?.toString()];
+          const replyObj = reply.toObject?.() || reply; 
           return {
-            ...reply,
+            ...replyObj,
             user: {
               firstname: replyUser?.firstname || "Ẩn",
               lastname: replyUser?.lastname || "Danh",
               avatar: replyUser?.avatar || "https://i.postimg.cc/7Y7ypVD2/avatar-mac-dinh.jpg",
             },
           };
-        }) || [],
+        }) || [],        
       };
 
       return commentWithUser;
