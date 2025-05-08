@@ -59,53 +59,46 @@ io.on("connection", (socket) => {
     console.log(`📌 User joined room: ${conversationId}`);
   });
 
-  socket.on(
-    "sendMessage",
-    async ({
-      conversationId,
-      senderId,
-      type,
-      content,
-      name,
-      senderAvatar,
-      timestamp,
-      isDeleted,
-      isPinned,
-      fileName,
-      fileType,
-    }) => {
-      console.log("Received message from client:", content);
+  socket.on("sendMessage", async ({ data, callback }) => {
+    const { conversationId, senderId, type, content, name, senderAvatar, timestamp, isDeleted, isPinned, fileName, fileType, } = data;
+    console.log("Received message from client:", content);
 
-      // const newMessage = new Message({ conversationId, senderId, type, content, timestamp, isDeleted, isPinned });
+    // const newMessage = new Message({ conversationId, senderId, type, content, timestamp, isDeleted, isPinned });
 
-      try {
-        // Gọi hàm sendMessage từ controller để xử lý và lưu tin nhắn
-        // const newMessage = await sendMessage({ conversationId, senderId, type, content, timestamp, isDeleted, isPinned });
-        const newMessage = await sendMessage({
-          conversationId,
-          senderId,
-          type,
-          content,
-          timestamp,
-          isDeleted,
-          isPinned,
-          fileName,
-          fileType,
-        });
+    try {
+      // Gọi hàm sendMessage từ controller để xử lý và lưu tin nhắn
+      // const newMessage = await sendMessage({ conversationId, senderId, type, content, timestamp, isDeleted, isPinned });
+      const newMessage = await sendMessage({
+        conversationId,
+        senderId,
+        type,
+        content,
+        timestamp,
+        isDeleted,
+        isPinned,
+        fileName,
+        fileType,
+      });
 
-        // Gửi tin nhắn tới các client trong phòng chat tương ứng
-        // io.to(conversationId).emit('newMessage', newMessage);
-        io.to(conversationId).emit("receiveMessage", {
-          ...newMessage.toObject(),
-          name,
-          senderAvatar,
-        });
-        console.log("✅ Sent new message to room:", conversationId);
-      } catch (error) {
-        console.error("Error sending message:", error);
+      // Gửi tin nhắn tới các client trong phòng chat tương ứng
+      // io.to(conversationId).emit('newMessage', newMessage);
+      io.to(conversationId).emit("receiveMessage", {
+        ...newMessage.toObject(),
+        name,
+        senderAvatar,
+      });
+
+      if (typeof callback === 'function') {
+        callback(); // báo về cho FE là đã xử lý xong
+      }
+      console.log("✅ Sent new message to room:", conversationId);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      if (typeof callback === 'function') {
+        callback({ error: 'Failed to send message' }); // hoặc gửi lỗi về nếu cần
       }
     }
-  );
+  });
 
   socket.on("revokeMessage", async (data) => {
     const { messageId, senderId, conversationId } = data;
@@ -473,7 +466,6 @@ io.on("connection", (socket) => {
         conversationId,
         groupName: conversation.groupName,
       });
-
     } catch (error) {
       console.error("❌ Error disbanding group:", error.message);
     }
