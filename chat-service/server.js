@@ -4,7 +4,7 @@ const socketIo = require("socket.io");
 const mongoose = require("mongoose");
 const axios = require("axios");
 require("dotenv").config();
-const cors = require('cors');
+const cors = require("cors");
 
 const messageRoutes = require("./routes/messageRoute");
 const conversationRoutes = require("./routes/conversationRoute");
@@ -21,12 +21,11 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: ["http://localhost:4000", "https://pulse-azure.vercel.app/"],
+    origin: ["http://localhost:4000", "https://pulse-azure.vercel.app"],
     methods: ["GET", "POST"],
-    credentials: true
-  }
+    credentials: true,
+  },
 });
-
 
 app.use(express.json());
 
@@ -442,6 +441,41 @@ io.on("connection", (socket) => {
       console.log(`✏️ Group name updated for ${conversationId}`);
     } catch (error) {
       console.error("❌ Error updating group name:", error.message);
+    }
+  });
+
+  // GIẢI TÁN NHÓM
+  socket.on("disbandGroup", async ({ conversationId }) => {
+    try {
+      const conversation = await Conversation.findById(conversationId);
+      if (!conversation || !conversation.isGroup) {
+        console.warn(
+          `⚠️ Conversation not found or not a group: ${conversationId}`
+        );
+        return;
+      }
+
+      // Xoá tất cả tin nhắn của nhóm (nếu muốn)
+      await Message.deleteMany({ conversationId });
+
+      // Xoá nhóm
+      await Conversation.findByIdAndDelete(conversationId);
+
+      // Xoá bản ghi DeletedConversation liên quan
+      await DeletedConversation.deleteMany({ conversationId });
+
+      console.log(
+        `💥 Group ${conversation.groupName} (${conversationId}) has been disbanded.`
+      );
+
+      // Gửi thông báo giải tán đến tất cả thành viên
+      io.to(conversationId).emit("groupDisbanded", {
+        conversationId,
+        groupName: conversation.groupName,
+      });
+
+    } catch (error) {
+      console.error("❌ Error disbanding group:", error.message);
     }
   });
 
