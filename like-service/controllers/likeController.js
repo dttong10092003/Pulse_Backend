@@ -54,16 +54,7 @@ const unlikePost = async (req, res) => {
 };
 
 
-// lấy số lượng like của 1 bài post
-const getLikeCount = async (req, res) => {
-    try {
-        const postId = req.params.postId;
-        const likeCount = await Like.countDocuments({ postId });
-        res.json({ postId, likeCount });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-};
+
 
 // lấy danh sách người đã like 1 bài post
 const getUsersWhoLiked = async (req, res) => {
@@ -88,4 +79,34 @@ const getUserLikedPosts = async (req, res) => {
     }
 };
 
-module.exports = { likePost, unlikePost, getLikeCount, getUsersWhoLiked, getUserLikedPosts };
+
+// Đếm số lượng like cho nhiều postId cùng lúc
+const getLikeCountsByPosts = async (req, res) => {
+    try {
+        const { postIds } = req.body;
+
+        if (!Array.isArray(postIds)) {
+            return res.status(400).json({ message: 'postIds must be an array' });
+        }
+
+        // Query count for each postId
+        const counts = await Promise.all(
+            postIds.map(async (postId) => {
+                const count = await Like.countDocuments({ postId });
+                return { postId, count };
+            })
+        );
+
+        // Chuyển kết quả thành object dạng { postId: count, ... }
+        const result = {};
+        counts.forEach(({ postId, count }) => {
+            result[postId] = count;
+        });
+
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+module.exports = { likePost, unlikePost, getUsersWhoLiked, getUserLikedPosts, getLikeCountsByPosts };

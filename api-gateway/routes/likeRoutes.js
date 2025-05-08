@@ -8,5 +8,6 @@ router.post("/:postId", authenticateToken, likeService.likePost);
 router.delete("/:postId", authenticateToken, likeService.unlikePost);
 router.get("/count/:postId", likeService.getLikeCount);
 router.get("/:postId", likeService.getUsersWhoLiked);
+router.post("/count-by-posts", likeService.getLikeCountsByPosts);
 
 module.exports = router;
