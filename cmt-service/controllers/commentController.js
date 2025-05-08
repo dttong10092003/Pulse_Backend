@@ -26,57 +26,30 @@ const createComment = async (req, res) => {
     const { postId, text } = req.body;
     const newComment = new Comment({ postId, userId, text });
     await newComment.save();
-    res.status(201).json({ message: 'Comment added successfully', comment: newComment });
+
+    // 🔥 Lấy thông tin user từ user-service
+    const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
+      userIds: [userId],
+    });
+
+    const user = userRes.data[0];
+
+    const commentWithUser = {
+      ...newComment.toObject(),
+      user: {
+        firstname: user?.firstname || "Ẩn",
+        lastname: user?.lastname || "Danh",
+        avatar: user?.avatar || "https://i.postimg.cc/7Y7ypVD2/avatar-mac-dinh.jpg",
+        username: user?.username || "unknown"
+      }
+    };
+
+    res.status(201).json({ message: 'Comment added successfully', comment: commentWithUser });
   } catch (err) {
     res.status(err.status || 500).json({ message: err.message });
   }
 };
 
-// GET /comments/:postId
-// const getCommentsByPost = async (req, res) => {
-//     try {
-//       const comments = await Comment.find({ postId: req.params.postId }).sort({ createdAt: -1 });
-  
-//       if (comments.length === 0) {
-//         return res.json([]); // Không cần gọi user-service
-//       }
-  
-//       const userIds = [...new Set(comments.map(c => c.userId?.toString()).filter(Boolean))];
-  
-//       if (userIds.length === 0) {
-//         return res.json(comments); // Có comment nhưng không có userId
-//       }
-  
-//       const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
-//         userIds
-//       });
-  
-//       const userList = userRes.data;
-//       const userMap = {};
-//       userList.forEach(user => {
-//         userMap[user.userId.toString()] = user;
-//       });
-  
-//       const commentsWithUserInfo = comments.map(comment => {
-//         const user = userMap[comment.userId?.toString()];
-//         return {
-//           ...comment.toObject(),
-//           user: {
-//             firstname: user?.firstname || "Ẩn",
-//             lastname: user?.lastname || "Danh",
-//             avatar: user?.avatar || "https://i.postimg.cc/7Y7ypVD2/avatar-mac-dinh.jpg"
-//           }
-//         };
-//       });
-  
-//       res.json(commentsWithUserInfo);
-//     } catch (err) {
-//       console.error("❌ getCommentsByPost failed:", err.message);
-//       res.status(500).json({ message: err.message });
-//     }
-//   };
-  
-  
 const getCommentsByPost = async (req, res) => {
   try {
     const comments = await Comment.find({ postId: req.params.postId }).sort({ createdAt: -1 });
@@ -134,23 +107,6 @@ const getCommentsByPost = async (req, res) => {
   }
 };
 
-// POST /comments/reply/:commentId
-// const addReplyToComment = async (req, res) => {
-//   try {
-//     const userId = verifyToken(req);
-//     const { text } = req.body;
-//     const comment = await Comment.findById(req.params.commentId);
-//     if (!comment) {
-//       return res.status(404).json({ message: 'Comment not found' });
-//     }
-//     comment.replies.push({ userId, text, timestamp: new Date() });
-//     comment.updatedAt = new Date();
-//     await comment.save();
-//     res.status(201).json({ message: 'Reply added successfully', comment });
-//   } catch (err) {
-//     res.status(err.status || 500).json({ message: err.message });
-//   }
-// };
 const addReplyToComment = async (req, res) => {
   try {
     const userId = verifyToken(req);
