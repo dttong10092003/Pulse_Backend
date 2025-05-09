@@ -27,13 +27,19 @@ const createComment = async (req, res) => {
     const newComment = new Comment({ postId, userId, text });
     await newComment.save();
 
-    // 🔥 Lấy thông tin user từ user-service
+    // 🔥 Lấy socket từ app
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("newComment", { postId }); // cập nhật số lượng bên MainContent
+      io.emit(`receive-comment-${postId}`, { postId }); // cập nhật realtime trong modal
+    }
+
+    // 🔥 Lấy thông tin user
     const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
       userIds: [userId],
     });
 
     const user = userRes.data[0];
-
     const commentWithUser = {
       ...newComment.toObject(),
       user: {
@@ -122,17 +128,23 @@ const addReplyToComment = async (req, res) => {
     comment.updatedAt = new Date();
     await comment.save();
 
-    const lastReply = comment.replies[comment.replies.length - 1]; // ✅ reply vừa thêm
+    const lastReply = comment.replies[comment.replies.length - 1];
 
-    // Lấy thông tin user cho reply
+    // 🔥 Emit từ backend
+    const io = req.app.get("io");
+    const postId = comment.postId?.toString();
+    if (io && postId) {
+      io.emit("newComment", { postId });
+      io.emit(`receive-comment-${postId}`, { postId });
+    }
+
     const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
       userIds: [userId]
     });
 
     const user = userRes.data[0];
-
     const replyWithUser = {
-      ...lastReply.toObject(), // cần toObject để đảm bảo có _id
+      ...lastReply.toObject(),
       user: {
         firstname: user?.firstname || "Ẩn",
         lastname: user?.lastname || "Danh",
