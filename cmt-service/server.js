@@ -45,7 +45,7 @@ io.on('connection', (socket) => {
     console.log('🔴 User disconnected:', socket.id);
   });
 });
-
+app.set("io", io);
 const PORT = process.env.PORT || 5004;
 server.listen(PORT, () => {
   console.log(`🚀 Comment Service (with Socket.IO) is running on port ${PORT}`);
