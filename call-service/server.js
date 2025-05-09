@@ -8,7 +8,13 @@ const app = express();
 app.use(cors());
 
 const server = http.createServer(app);
-
+// const io = socketIO(server, {
+//   cors: {
+//     origin: "*", //sửa thành link tại vì render không cho phép *
+//     // origin: ["https://testz-six.vercel.app"],
+//     methods: ["GET", "POST"],
+//   },
+// });
 const io = socketIo(server, {
   cors: {
     origin: ["http://localhost:4000", "https://pulse-azure.vercel.app", "https://testz-six.vercel.app"],
@@ -16,7 +22,7 @@ const io = socketIo(server, {
     credentials: true
   }
 });
-const activeCallUsers = new Map();
+ 
 
 io.on("connection", (socket) => {
   console.log(`📡 Client connected: ${socket.id}`);
@@ -25,20 +31,6 @@ io.on("connection", (socket) => {
     socket.join(userId);
     console.log(`✅ User ${userId} joined room`);
   });
- // ✅ Nhận thông tin người mới tham gia call
- socket.on("userJoinedCall", (userInfo) => {
-  // Lưu thông tin người dùng
-  activeCallUsers.set(socket.id, userInfo);
-
-  // Gửi thông tin này đến tất cả người khác (trừ bản thân)
-  socket.broadcast.emit("userJoinedCall", userInfo);
-
-  // Gửi danh sách người đã có mặt trước đó cho người mới
-  const others = Array.from(activeCallUsers.values()).filter(
-    (user) => user.uid !== userInfo.uid
-  );
-  socket.emit("existingUsersInCall", others);
-});
 
   socket.on("incomingCall", (data) => {
     const { toUserId } = data;
@@ -65,7 +57,6 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log(`❌ Client disconnected: ${socket.id}`);
-    activeCallUsers.delete(socket.id);
   });
 });
 
