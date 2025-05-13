@@ -29,14 +29,12 @@ const verifyToken = (req) => {
 const createPost = async (req, res) => {
     try {
         const userId = verifyToken(req);
-        const { content, media, tags } = req.body;
+        const { content, media, tags, sharedPostId } = req.body;
 
         let uploadedMedia = [];
-
-        if (media && Array.isArray(media) && media.length > 0) {
-            // Duyệt và upload từng ảnh/video
+        if (media && Array.isArray(media)) {
             uploadedMedia = await Promise.all(
-                media.map((fileBase64) => uploadToCloudinary(fileBase64, 'posts'))
+                media.map((file) => uploadToCloudinary(file, 'posts'))
             );
         }
 
@@ -44,17 +42,47 @@ const createPost = async (req, res) => {
             userId,
             content,
             media: uploadedMedia,
-            tags
+            tags,
+            sharedPostId: sharedPostId || null
         });
 
         await newPost.save();
-
         res.status(201).json(newPost);
     } catch (err) {
         console.error("❌ createPost error:", err);
         res.status(err.status || 500).json({ message: err.message });
     }
 };
+
+// const createPost = async (req, res) => {
+//     try {
+//         const userId = verifyToken(req);
+//         const { content, media, tags } = req.body;
+
+//         let uploadedMedia = [];
+
+//         if (media && Array.isArray(media) && media.length > 0) {
+//             // Duyệt và upload từng ảnh/video
+//             uploadedMedia = await Promise.all(
+//                 media.map((fileBase64) => uploadToCloudinary(fileBase64, 'posts'))
+//             );
+//         }
+
+//         const newPost = new Post({
+//             userId,
+//             content,
+//             media: uploadedMedia,
+//             tags
+//         });
+
+//         await newPost.save();
+
+//         res.status(201).json(newPost);
+//     } catch (err) {
+//         console.error("❌ createPost error:", err);
+//         res.status(err.status || 500).json({ message: err.message });
+//     }
+// };
 
 // Xóa bài viết (Yêu cầu đăng nhập & chỉ chủ sở hữu mới xóa được)
 const deletePost = async (req, res) => {
@@ -92,36 +120,93 @@ const getAllPosts = async (req, res) => {
     try {
         const posts = await Post.find().sort({ createdAt: -1 });
 
-        const userIds = [...new Set(posts.map(p => p.userId.toString()))];
+        const userIds = [...new Set([
+            ...posts.map(p => p.userId.toString()),
+            ...posts.filter(p => p.sharedPostId).map(p => p.sharedPostId.toString())
+        ])];
 
-        // Gọi sang user-service để lấy thông tin user theo danh sách userIds
         const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
             userIds
         });
 
-        const userList = userRes.data; // Mảng [{ userId, firstname, lastname, avatar }]
+        const userList = userRes.data;
         const userMap = {};
         userList.forEach(user => {
-            userMap[user.userId.toString()] = user;
+            userMap[user.userId] = user;
         });
 
-        // Gộp dữ liệu user vào post
-        const postsWithUserInfo = posts.map(post => {
+        const postsWithUserInfo = await Promise.all(posts.map(async post => {
             const user = userMap[post.userId.toString()];
+            let sharedPost = null;
+
+            if (post.sharedPostId) {
+                try {
+                    const sp = await Post.findById(post.sharedPostId);
+                    if (sp) {
+                        const spUser = userMap[sp.userId.toString()];
+                        sharedPost = {
+                            _id: sp._id,
+                            content: sp.content,
+                            media: sp.media,
+                            username: `${spUser?.firstname || "Ẩn"} ${spUser?.lastname || "Danh"}`,
+                            avatar: spUser?.avatar || "https://picsum.photos/200"
+                        };
+                    }
+                } catch (err) {
+                    console.warn("⚠️ Không thể lấy sharedPost:", post.sharedPostId);
+                }
+            }
+
             return {
                 ...post.toObject(),
                 username: `${user?.firstname || "Ẩn"} ${user?.lastname || "Danh"}`,
-                avatar: user?.avatar || "https://picsum.photos/200"
+                avatar: user?.avatar || "https://picsum.photos/200",
+                sharedPost
             };
-        });
+        }));
 
         res.json(postsWithUserInfo);
     } catch (err) {
-        console.error("❌ getAllPosts failed:", err.message);
-        console.error("📌 Full error:", err.response?.data || err);
         res.status(500).json({ message: err.message });
     }
 };
+
+
+
+// const getAllPosts = async (req, res) => {
+//     try {
+//         const posts = await Post.find().sort({ createdAt: -1 });
+
+//         const userIds = [...new Set(posts.map(p => p.userId.toString()))];
+
+//         // Gọi sang user-service để lấy thông tin user theo danh sách userIds
+//         const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
+//             userIds
+//         });
+
+//         const userList = userRes.data; // Mảng [{ userId, firstname, lastname, avatar }]
+//         const userMap = {};
+//         userList.forEach(user => {
+//             userMap[user.userId.toString()] = user;
+//         });
+
+//         // Gộp dữ liệu user vào post
+//         const postsWithUserInfo = posts.map(post => {
+//             const user = userMap[post.userId.toString()];
+//             return {
+//                 ...post.toObject(),
+//                 username: `${user?.firstname || "Ẩn"} ${user?.lastname || "Danh"}`,
+//                 avatar: user?.avatar || "https://picsum.photos/200"
+//             };
+//         });
+
+//         res.json(postsWithUserInfo);
+//     } catch (err) {
+//         console.error("❌ getAllPosts failed:", err.message);
+//         console.error("📌 Full error:", err.response?.data || err);
+//         res.status(500).json({ message: err.message });
+//     }
+// };
 
 // Lấy bài viết theo ID (Không yêu cầu đăng nhập)
 const getPostById = async (req, res) => {
@@ -152,51 +237,51 @@ const getPostsByUser = async (req, res) => {
 // Sửa bài viết (Yêu cầu đăng nhập & chỉ chủ sở hữu mới chỉnh sửa được)
 const editPost = async (req, res) => {
     try {
-      const userId = verifyToken(req);
-      const { content, media } = req.body;
-  
-      const post = await Post.findById(req.params.id);
-      if (!post) return res.status(404).json({ message: 'Post not found' });
-  
-      if (post.userId.toString() !== userId) {
-        return res.status(403).json({ message: 'Forbidden: You can only edit your own posts' });
-      }
-  
-      if (Array.isArray(media)) {
-        // Xác định media nào là đã có sẵn (URL Cloudinary) và media nào là base64 mới upload
-        const newMedia = [];
-        const existingMedia = [];
-  
-        for (const item of media) {
-          if (item.startsWith('data:')) {
-            newMedia.push(item); // base64 cần upload
-          } else {
-            existingMedia.push(item); // URL đã upload rồi
-          }
+        const userId = verifyToken(req);
+        const { content, media } = req.body;
+
+        const post = await Post.findById(req.params.id);
+        if (!post) return res.status(404).json({ message: 'Post not found' });
+
+        if (post.userId.toString() !== userId) {
+            return res.status(403).json({ message: 'Forbidden: You can only edit your own posts' });
         }
-  
-        // Nếu có file base64 thì upload
-        let uploadedMedia = [];
-        if (newMedia.length > 0) {
-          uploadedMedia = await Promise.all(
-            newMedia.map((fileBase64) => uploadToCloudinary(fileBase64, 'posts'))
-          );
+
+        if (Array.isArray(media)) {
+            // Xác định media nào là đã có sẵn (URL Cloudinary) và media nào là base64 mới upload
+            const newMedia = [];
+            const existingMedia = [];
+
+            for (const item of media) {
+                if (item.startsWith('data:')) {
+                    newMedia.push(item); // base64 cần upload
+                } else {
+                    existingMedia.push(item); // URL đã upload rồi
+                }
+            }
+
+            // Nếu có file base64 thì upload
+            let uploadedMedia = [];
+            if (newMedia.length > 0) {
+                uploadedMedia = await Promise.all(
+                    newMedia.map((fileBase64) => uploadToCloudinary(fileBase64, 'posts'))
+                );
+            }
+
+            // Media cuối cùng = file đã có + file mới upload
+            post.media = [...existingMedia, ...uploadedMedia];
         }
-  
-        // Media cuối cùng = file đã có + file mới upload
-        post.media = [...existingMedia, ...uploadedMedia];
-      }
-  
-      if (content) post.content = content;
-  
-      await post.save();
-  
-      res.json({ message: 'Post updated successfully', post });
+
+        if (content) post.content = content;
+
+        await post.save();
+
+        res.json({ message: 'Post updated successfully', post });
     } catch (err) {
-      console.error("❌ editPost error:", err);
-      res.status(err.status || 500).json({ message: err.message });
+        console.error("❌ editPost error:", err);
+        res.status(err.status || 500).json({ message: err.message });
     }
-  };
-  
+};
+
 
 module.exports = { createPost, getAllPosts, getPostById, deletePost, getPostsByUser, editPost };
