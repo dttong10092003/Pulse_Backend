@@ -12,6 +12,10 @@ const postSchema = new mongoose.Schema({
     media: [{
         type: String
     }],
+    sharedPostId: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null
+    },
     createdAt: {
         type: Date,
         default: Date.now
