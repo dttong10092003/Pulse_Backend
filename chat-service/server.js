@@ -123,6 +123,7 @@ io.on("connection", (socket) => {
       }
 
       message.isDeleted = true;
+      message.isPinned = false; // Bỏ ghim nếu có
       message.content = "Message revoked";
       message.type = "text";
       await message.save();
