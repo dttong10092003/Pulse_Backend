@@ -228,14 +228,19 @@ const getPostsByUser = async (req, res) => {
 
         const posts = await Post.find({ userId }).sort({ createdAt: -1 });
 
+        // 🧠 Tìm tất cả sharedPostId để truy xuất post gốc
         const sharedPostIds = posts
             .filter(p => p.sharedPostId)
             .map(p => p.sharedPostId.toString());
 
+        // Truy xuất các post gốc (shared)
+        const sharedPosts = await Post.find({ _id: { $in: sharedPostIds } });
+
+        // Tập hợp tất cả userId: user của post + user của sharedPost
         const allUserIds = [
             ...new Set([
                 ...posts.map(p => p.userId.toString()),
-                ...sharedPostIds
+                ...sharedPosts.map(sp => sp.userId.toString()),
             ])
         ];
 
@@ -248,30 +253,22 @@ const getPostsByUser = async (req, res) => {
             userMap[user.userId] = user;
         });
 
-        const postsWithShared = await Promise.all(posts.map(async post => {
-            const user = userMap[post.userId.toString()];
-            let sharedPost = null;
-
-            if (post.sharedPostId) {
-                const sp = await Post.findById(post.sharedPostId);
-                if (sp) {
-                    const spUser = userMap[sp.userId.toString()];
-                    sharedPost = {
-                        _id: sp._id,
-                        content: sp.content,
-                        media: sp.media,
-                        username: `${spUser?.firstname || "Ẩn"} ${spUser?.lastname || "Danh"}`,
-                        avatar: spUser?.avatar || "https://picsum.photos/200"
-                    };
-                }
-            }
-
-            return {
-                ...post.toObject(),
-                username: `${user?.firstname || "Ẩn"} ${user?.lastname || "Danh"}`,
-                avatar: user?.avatar || "https://picsum.photos/200",
-                sharedPost
+        const sharedPostMap = {};
+        sharedPosts.forEach(sp => {
+            sharedPostMap[sp._id] = {
+                _id: sp._id,
+                content: sp.content,
+                media: sp.media,
+                username: `${userMap[sp.userId]?.firstname || "Ẩn"} ${userMap[sp.userId]?.lastname || "Danh"}`,
+                avatar: userMap[sp.userId]?.avatar || "https://picsum.photos/200"
             };
+        });
+
+        const postsWithShared = posts.map(post => ({
+            ...post.toObject(),
+            username: `${userMap[post.userId]?.firstname || "Ẩn"} ${userMap[post.userId]?.lastname || "Danh"}`,
+            avatar: userMap[post.userId]?.avatar || "https://picsum.photos/200",
+            sharedPost: post.sharedPostId ? sharedPostMap[post.sharedPostId] : null
         }));
 
         res.json(postsWithShared);
@@ -280,6 +277,7 @@ const getPostsByUser = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
 
 
 
