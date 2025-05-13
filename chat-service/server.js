@@ -473,11 +473,55 @@ io.on("connection", (socket) => {
         conversationId,
         groupName: conversation.groupName,
       });
-
     } catch (error) {
       console.error("❌ Error disbanding group:", error.message);
     }
   });
+
+  // Ghim tin nhắn
+  socket.on("pinMessage", async ({ conversationId, messageId }) => {
+    try {
+      const message = await Message.findById(messageId);
+      if (!message) {
+        return socket.emit("error", { message: "Message not found" });
+      }
+
+      message.isPinned = true;
+      await message.save();
+
+      // Phát sự kiện cho toàn bộ conversation
+      io.to(conversationId).emit("messagePinned", {
+        conversationId,
+        messageId,
+      });
+
+      console.log(" Message pinned: ", messageId);
+    } catch (error) {
+      console.error("Error pinning message:", error);
+    }
+  });
+
+  // Bỏ ghim tin nhắn
+socket.on("unpinMessage", async ({ conversationId, messageId }) => {
+  try {
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return socket.emit("error", { message: "Message not found" });
+    }
+
+    message.isPinned = false;
+    await message.save();
+
+    io.to(conversationId).emit("messageUnpinned", {
+      conversationId,
+      messageId,
+    });
+
+    console.log(" Message unpinned: ", messageId);
+  } catch (error) {
+    console.error("Error unpinning message:", error);
+  }
+});
 
   // Khi người dùng rời phòng (disconnect)
   socket.on("disconnect", async () => {
