@@ -224,16 +224,80 @@ const getPostById = async (req, res) => {
 const getPostsByUser = async (req, res) => {
     try {
         const userId = req.query.userId;
-        if (!userId) {
-            return res.status(400).json({ message: "Missing userId" });
-        }
+        if (!userId) return res.status(400).json({ message: "Missing userId" });
 
         const posts = await Post.find({ userId }).sort({ createdAt: -1 });
-        res.json(posts);
+
+        const sharedPostIds = posts
+            .filter(p => p.sharedPostId)
+            .map(p => p.sharedPostId.toString());
+
+        const allUserIds = [
+            ...new Set([
+                ...posts.map(p => p.userId.toString()),
+                ...sharedPostIds
+            ])
+        ];
+
+        const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
+            userIds: allUserIds
+        });
+
+        const userMap = {};
+        userRes.data.forEach(user => {
+            userMap[user.userId] = user;
+        });
+
+        const postsWithShared = await Promise.all(posts.map(async post => {
+            const user = userMap[post.userId.toString()];
+            let sharedPost = null;
+
+            if (post.sharedPostId) {
+                const sp = await Post.findById(post.sharedPostId);
+                if (sp) {
+                    const spUser = userMap[sp.userId.toString()];
+                    sharedPost = {
+                        _id: sp._id,
+                        content: sp.content,
+                        media: sp.media,
+                        username: `${spUser?.firstname || "Ẩn"} ${spUser?.lastname || "Danh"}`,
+                        avatar: spUser?.avatar || "https://picsum.photos/200"
+                    };
+                }
+            }
+
+            return {
+                ...post.toObject(),
+                username: `${user?.firstname || "Ẩn"} ${user?.lastname || "Danh"}`,
+                avatar: user?.avatar || "https://picsum.photos/200",
+                sharedPost
+            };
+        }));
+
+        res.json(postsWithShared);
     } catch (err) {
+        console.error("❌ getPostsByUser error:", err);
         res.status(500).json({ message: err.message });
     }
 };
+
+
+
+
+
+// const getPostsByUser = async (req, res) => {
+//     try {
+//         const userId = req.query.userId;
+//         if (!userId) {
+//             return res.status(400).json({ message: "Missing userId" });
+//         }
+
+//         const posts = await Post.find({ userId }).sort({ createdAt: -1 });
+//         res.json(posts);
+//     } catch (err) {
+//         res.status(500).json({ message: err.message });
+//     }
+// };
 // Sửa bài viết (Yêu cầu đăng nhập & chỉ chủ sở hữu mới chỉnh sửa được)
 const editPost = async (req, res) => {
     try {
