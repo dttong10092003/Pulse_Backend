@@ -30,6 +30,9 @@ const createPost = async (req, res) => {
     try {
         const userId = verifyToken(req);
         const { content, media, tags, sharedPostId } = req.body;
+        if (!Array.isArray(tags) || tags.length === 0) {
+            tags = ["Beauty"]; // Gán mặc định nếu không có
+        }
 
         let uploadedMedia = [];
         if (media && Array.isArray(media)) {
@@ -54,35 +57,6 @@ const createPost = async (req, res) => {
     }
 };
 
-// const createPost = async (req, res) => {
-//     try {
-//         const userId = verifyToken(req);
-//         const { content, media, tags } = req.body;
-
-//         let uploadedMedia = [];
-
-//         if (media && Array.isArray(media) && media.length > 0) {
-//             // Duyệt và upload từng ảnh/video
-//             uploadedMedia = await Promise.all(
-//                 media.map((fileBase64) => uploadToCloudinary(fileBase64, 'posts'))
-//             );
-//         }
-
-//         const newPost = new Post({
-//             userId,
-//             content,
-//             media: uploadedMedia,
-//             tags
-//         });
-
-//         await newPost.save();
-
-//         res.status(201).json(newPost);
-//     } catch (err) {
-//         console.error("❌ createPost error:", err);
-//         res.status(err.status || 500).json({ message: err.message });
-//     }
-// };
 
 // Xóa bài viết (Yêu cầu đăng nhập & chỉ chủ sở hữu mới xóa được)
 const deletePost = async (req, res) => {
@@ -171,42 +145,6 @@ const getAllPosts = async (req, res) => {
     }
 };
 
-
-
-// const getAllPosts = async (req, res) => {
-//     try {
-//         const posts = await Post.find().sort({ createdAt: -1 });
-
-//         const userIds = [...new Set(posts.map(p => p.userId.toString()))];
-
-//         // Gọi sang user-service để lấy thông tin user theo danh sách userIds
-//         const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
-//             userIds
-//         });
-
-//         const userList = userRes.data; // Mảng [{ userId, firstname, lastname, avatar }]
-//         const userMap = {};
-//         userList.forEach(user => {
-//             userMap[user.userId.toString()] = user;
-//         });
-
-//         // Gộp dữ liệu user vào post
-//         const postsWithUserInfo = posts.map(post => {
-//             const user = userMap[post.userId.toString()];
-//             return {
-//                 ...post.toObject(),
-//                 username: `${user?.firstname || "Ẩn"} ${user?.lastname || "Danh"}`,
-//                 avatar: user?.avatar || "https://picsum.photos/200"
-//             };
-//         });
-
-//         res.json(postsWithUserInfo);
-//     } catch (err) {
-//         console.error("❌ getAllPosts failed:", err.message);
-//         console.error("📌 Full error:", err.response?.data || err);
-//         res.status(500).json({ message: err.message });
-//     }
-// };
 
 // Lấy bài viết theo ID (Không yêu cầu đăng nhập)
 const getPostById = async (req, res) => {
@@ -300,7 +238,8 @@ const getPostsByUser = async (req, res) => {
 const editPost = async (req, res) => {
     try {
         const userId = verifyToken(req);
-        const { content, media } = req.body;
+        const { content, media, tags } = req.body;
+
 
         const post = await Post.findById(req.params.id);
         if (!post) return res.status(404).json({ message: 'Post not found' });
@@ -335,7 +274,9 @@ const editPost = async (req, res) => {
         }
 
         if (content) post.content = content;
-
+        if (Array.isArray(tags)) {
+            post.tags = tags;
+        }
         await post.save();
 
         res.json({ message: 'Post updated successfully', post });
