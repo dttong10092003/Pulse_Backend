@@ -17,13 +17,17 @@ const userSchema = new mongoose.Schema({
         unique: true,
         sparse: true,
     },
-    password: { 
-        type: String, 
+    password: {
+        type: String,
     },
-    googleId: { 
-        type: String, 
+    googleId: {
+        type: String,
         unique: true,
         sparse: true, // Chỉ dùng cho user đăng ký qua Google OAuth2
+    },
+    isAdmin: {
+        type: Boolean,
+        default: false
     },
     createdAt: {
         type: Date,
