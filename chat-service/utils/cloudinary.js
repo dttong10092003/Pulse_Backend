@@ -6,10 +6,12 @@ const uploadToCloudinary = async (buffer, originalFileName, folder = 'chat_files
     const ext = path.extname(originalFileName).toLowerCase();
     const rawTypes = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.zip', '.rar', '.ppt', '.pptx'];
     const imageTypes = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'];
+    const audioTypes = ['.mp3', '.wav', '.ogg', '.m4a'];
 
     let resourceType = 'auto';
-  if (imageTypes.includes(ext)) resourceType = 'image';
-  else if (rawTypes.includes(ext)) resourceType = 'raw';
+    if (imageTypes.includes(ext)) resourceType = 'image';
+    else if (rawTypes.includes(ext)) resourceType = 'raw';
+    else if (audioTypes.includes(ext)) resourceType = 'video';
 
     return new Promise((resolve, reject) => {
         cloudinary.uploader.upload_stream(
