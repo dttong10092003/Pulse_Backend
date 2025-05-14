@@ -365,5 +365,31 @@ const getTopUsersExcludingFollowed = async (req, res) => {
         return res.status(500).json({ message: "Failed to fetch suggested users." });
     }
 };
-
-module.exports = { getTopUsersExcludingFollowed, getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users, getUserDetails };
+const getAllUsers = async (req, res) => {
+    try {
+      const userDetails = await UserDetail.find().sort({ createdAt: -1 });
+  
+      const userIds = userDetails.map(user => user.userId);
+      if (userIds.length === 0) {
+        return res.status(200).json([]);
+      }
+  
+      const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, { userIds });
+      const userMap = authResponse.data;
+  
+      const result = userDetails.map(user => ({
+        _id: user.userId.toString(),
+        firstname: user.firstname,
+        lastname: user.lastname,
+        avatar: user.avatar,
+        username: userMap[user.userId.toString()] || "unknown",
+      }));
+  
+      res.status(200).json(result);
+    } catch (error) {
+      console.error("❌ Error in getAllUsers:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  };
+  
+module.exports = { getTopUsersExcludingFollowed, getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users, getUserDetails, getAllUsers };
