@@ -190,6 +190,17 @@ io.on("connection", (socket) => {
 
       await conversation.save();
 
+      const now = new Date(0);
+      await Promise.all(
+        members.map((member) =>
+          DeletedConversation.create({
+            conversationId: conversation._id,
+            userId: member.userId,
+            deletedAt: now,
+          })
+        )
+      );
+
       const conversationWithDetails = {
         _id: conversation._id,
         ...conversation.toObject(),
@@ -238,6 +249,17 @@ io.on("connection", (socket) => {
       });
 
       await conversation.save();
+
+      const now = new Date(0);
+      await Promise.all(
+        members.map((member) =>
+          DeletedConversation.create({
+            conversationId: conversation._id,
+            userId: member.userId,
+            deletedAt: now,
+          })
+        )
+      );
 
       const conversationWithDetails = {
         _id: conversation._id,
@@ -503,26 +525,26 @@ io.on("connection", (socket) => {
   });
 
   // Bỏ ghim tin nhắn
-socket.on("unpinMessage", async ({ conversationId, messageId }) => {
-  try {
-    const message = await Message.findById(messageId);
-    if (!message) {
-      return socket.emit("error", { message: "Message not found" });
+  socket.on("unpinMessage", async ({ conversationId, messageId }) => {
+    try {
+      const message = await Message.findById(messageId);
+      if (!message) {
+        return socket.emit("error", { message: "Message not found" });
+      }
+
+      message.isPinned = false;
+      await message.save();
+
+      io.to(conversationId).emit("messageUnpinned", {
+        conversationId,
+        messageId,
+      });
+
+      console.log(" Message unpinned: ", messageId);
+    } catch (error) {
+      console.error("Error unpinning message:", error);
     }
-
-    message.isPinned = false;
-    await message.save();
-
-    io.to(conversationId).emit("messageUnpinned", {
-      conversationId,
-      messageId,
-    });
-
-    console.log(" Message unpinned: ", messageId);
-  } catch (error) {
-    console.error("Error unpinning message:", error);
-  }
-});
+  });
 
   // Khi người dùng rời phòng (disconnect)
   socket.on("disconnect", async () => {
