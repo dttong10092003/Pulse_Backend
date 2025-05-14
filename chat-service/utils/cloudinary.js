@@ -6,7 +6,7 @@ const uploadToCloudinary = async (buffer, originalFileName, folder = 'chat_files
     const ext = path.extname(originalFileName).toLowerCase();
     const rawTypes = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.zip', '.rar', '.ppt', '.pptx'];
     const imageTypes = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'];
-    const audioTypes = ['.mp3', '.wav', '.ogg', '.m4a'];
+    const audioTypes = ['.mp3', '.wav', '.ogg', '.m4a', '.webm'];
 
     let resourceType = 'auto';
     if (imageTypes.includes(ext)) resourceType = 'image';
