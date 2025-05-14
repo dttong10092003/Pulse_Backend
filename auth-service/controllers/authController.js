@@ -116,6 +116,27 @@ const loginGoogle = async (req, res) => {
 };
 
 // Đăng nhập bằng username/password
+// const loginUser = async (req, res) => {
+//   try {
+//     const { username, password } = req.body;
+
+//     const user = await User.findOne({ username });
+//     if (!user) {
+//       return res.status(400).json({ message: 'Invalid username or password' });
+//     }
+
+//     const isMatch = await bcrypt.compare(password, user.password);
+//     if (!isMatch) {
+//       return res.status(400).json({ message: 'Invalid username or password' });
+//     }
+
+//     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+//     res.json({user, token });
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
 const loginUser = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -132,11 +153,20 @@ const loginUser = async (req, res) => {
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    res.json({user, token });
+    // ✅ Explicitly chọn fields trả về
+    res.json({
+      token,
+      user: {
+        _id: user._id,
+        username: user.username,
+        isAdmin: user.isAdmin // 👈 cần cái này để frontend biết
+      }
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 // Middleware xác thực JWT
 const authenticateToken = (req, res, next) => {
