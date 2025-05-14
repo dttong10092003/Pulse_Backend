@@ -42,7 +42,6 @@ services:
       - USER_SERVICE_URL=http://user-service:5002
       - JWT_SECRET=mySuperSecretKey12345!@#123
       - CLOUDINARY_URL=cloudinary://917723455993985:4sIKSFniroLohdzbPDk3nzfREzs@df2amyjzw
-      - USER_SERVICE_URL=http://user-service:5002
     depends_on:
       - mongo 
 
@@ -91,6 +90,7 @@ services:
       - REDIS_URL=redis://redis:6379
       - USER_SERVICE_URL=http://user-service:5002
       - CLOUDINARY_URL=cloudinary://725489854714717:FWkFjsjCpKtmrpzTCe8S-13cuf8@dh9otw5el
+      - JWT_SECRET=mySuperSecretKey12345!@#123
     depends_on:
       - mongo
       - redis
