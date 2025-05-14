@@ -121,6 +121,17 @@ const getTopUsersExcludingFollowed = async (req, res) => {
   }
 };
 
+const getAllUsers = async (req, res) => {
+  try {
+    const response = await axios.get(`${USER_SERVICE_URL}/users/all`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    console.error("❌ Error in API Gateway getAllUsers:", error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || "Failed to fetch users",
+    });
+  }
+};
 
 
-module.exports = { getUser, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users,getTopUsersExcludingFollowed };
+module.exports = { getUser, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users,getTopUsersExcludingFollowed,getAllUsers };
