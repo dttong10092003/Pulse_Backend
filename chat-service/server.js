@@ -63,10 +63,7 @@ io.on("connection", (socket) => {
       const results = await pipeline.exec();
       console.log("🔍 Redis results:", results);
 
-      const onlineIds = userIds.filter((_, index) => {
-        const res = results[index];
-        return Array.isArray(res) && res[1] === 1;
-      });
+      const onlineIds = userIds.filter((_, index) => results[index] === 1);
       callback(onlineIds); // Gửi lại danh sách user đang online
       console.log("✅ Online users:", onlineIds);
     } catch (error) {
