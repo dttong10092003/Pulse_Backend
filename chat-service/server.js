@@ -54,6 +54,21 @@ io.on("connection", (socket) => {
     console.log(`✅ User ${userId} is online`);
   });
 
+  // ✅ Khi frontend check online từ danh sách
+  socket.on("checkOnlineUsers", async (userIds, callback) => {
+    try {
+      const pipeline = redisClient.multi();
+      userIds.forEach((userId) => pipeline.exists(`online:${userId}`));
+      const results = await pipeline.exec();
+
+      const onlineIds = userIds.filter((_, index) => results[index][1] === 1);
+      callback(onlineIds); // Gửi lại danh sách user đang online
+    } catch (error) {
+      console.error("❌ Error checking online users:", error);
+      callback([]);
+    }
+  });
+
   socket.on("joinRoom", (conversationId) => {
     socket.join(conversationId);
     console.log(`📌 User joined room: ${conversationId}`);
