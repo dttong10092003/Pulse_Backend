@@ -150,14 +150,69 @@ const getAllPosts = async (req, res) => {
 const getPostById = async (req, res) => {
     try {
         const post = await Post.findById(req.params.id);
-        if (!post) {
-            return res.status(404).json({ message: 'Post not found' });
+        if (!post) return res.status(404).json({ message: 'Post not found' });
+
+        const userIds = [post.userId.toString()];
+        if (post.sharedPostId) {
+            userIds.push(post.sharedPostId.toString());
         }
-        res.json(post);
+
+        // Lấy thông tin user từ user-service
+        const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
+            userIds
+        });
+        const userMap = {};
+        userRes.data.forEach(user => {
+            userMap[user.userId] = user;
+        });
+
+        // Gắn user info cho post
+        const user = userMap[post.userId.toString()];
+        let sharedPost = null;
+
+        if (post.sharedPostId) {
+            const shared = await Post.findById(post.sharedPostId);
+            const sharedUser = userMap[shared.userId.toString()];
+            sharedPost = {
+                _id: shared._id,
+                content: shared.content,
+                media: shared.media,
+                username: `${sharedUser?.firstname || "Ẩn"} ${sharedUser?.lastname || "Danh"}`,
+                avatar: sharedUser?.avatar || "https://picsum.photos/200"
+            };
+        }
+
+        const postWithUser = {
+            ...post.toObject(),
+            username: `${user?.firstname || "Ẩn"} ${user?.lastname || "Danh"}`,
+            avatar: user?.avatar || "https://picsum.photos/200",
+            sharedPost
+        };
+
+        res.json(postWithUser);
     } catch (err) {
+        console.error("❌ getPostById error:", err);
         res.status(500).json({ message: err.message });
     }
 };
+
+
+
+// const getPostById = async (req, res) => {
+//     try {
+//         const post = await Post.findById(req.params.id);
+//         if (!post) {
+//             return res.status(404).json({ message: 'Post not found' });
+//         }
+//         res.json(post);
+//     } catch (err) {
+//         res.status(500).json({ message: err.message });
+//     }
+// };
+
+
+
+
 // Lấy bài viết theo userId (Yêu cầu đăng nhập)
 const getPostsByUser = async (req, res) => {
     try {
