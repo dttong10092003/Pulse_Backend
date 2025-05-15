@@ -236,7 +236,9 @@ const getPostsByUser = async (req, res) => {
                 ...sharedPosts.map(sp => sp.userId.toString()),
             ])
         ];
-
+        if (allUserIds.length === 0) {
+            return res.json([]); // Không có post nào ⇒ trả về mảng rỗng
+        }
         const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
             userIds: allUserIds
         });
