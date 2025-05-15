@@ -107,7 +107,8 @@ io.on("connection", (socket) => {
 
         // Giữ lại TRIM_SIZE mới nhất (giảm bộ nhớ)
         await redisClient.lTrim(key, 0, TRIM_SIZE - 1);
-
+        await redisClient.expire(key, WINDOW_SIZE * 2);
+        
         // Lấy các timestamp còn lại trong danh sách
         const timestamps = await redisClient.lRange(key, 0, -1);
         const recent = timestamps
