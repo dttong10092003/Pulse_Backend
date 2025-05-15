@@ -41,6 +41,10 @@ app.use("/messages", messageRoutes);
 app.use("/conversations", conversationRoutes);
 app.use("/deleted-conversations", deletedConversationRoutes);
 
+const MAX_MESSAGES = 8;
+const WINDOW_SIZE = 5; // giây
+const TRIM_SIZE = 16;
+
 // Socket.io xử lý real-time
 io.on("connection", (socket) => {
   console.log("🔥 User connected:", socket.id);
@@ -50,7 +54,7 @@ io.on("connection", (socket) => {
 
   // Khi người dùng online
   socket.on("userOnline", async (userId) => {
-    await redisClient.set(`online:${userId}`, "1", { EX: 300 }); // Online trong 5 phút
+    await redisClient.set(`online:${userId}`, "1", { EX: 65 }); // Online trong 65s
     console.log(`✅ User ${userId} is online`);
   });
 
@@ -94,11 +98,33 @@ io.on("connection", (socket) => {
     }) => {
       console.log("Received message from client:", content);
 
-      // const newMessage = new Message({ conversationId, senderId, type, content, timestamp, isDeleted, isPinned });
-
       try {
+        const key = `rate:${senderId}`;
+        const now = Date.now();
+
+        // Đẩy timestamp mới vào danh sách
+        await redisClient.lPush(key, now.toString());
+
+        // Giữ lại TRIM_SIZE mới nhất (giảm bộ nhớ)
+        await redisClient.lTrim(key, 0, TRIM_SIZE - 1);
+
+        // Lấy các timestamp còn lại trong danh sách
+        const timestamps = await redisClient.lRange(key, 0, -1);
+        const recent = timestamps
+          .map(Number)
+          .filter((ts) => now - ts <= WINDOW_SIZE * 1000);
+
+        if (recent.length > MAX_MESSAGES) {
+          console.warn(
+            `🚫 Spam detected from ${senderId}, recent count: ${recent.length}`
+          );
+          socket.emit("rateLimitExceeded", {
+            message: "You are sending messages too quickly. Please slow down",
+          });
+          return;
+        }
+
         // Gọi hàm sendMessage từ controller để xử lý và lưu tin nhắn
-        // const newMessage = await sendMessage({ conversationId, senderId, type, content, timestamp, isDeleted, isPinned });
         const newMessage = await sendMessage({
           conversationId,
           senderId,
@@ -112,7 +138,6 @@ io.on("connection", (socket) => {
         });
 
         // Gửi tin nhắn tới các client trong phòng chat tương ứng
-        // io.to(conversationId).emit('newMessage', newMessage);
         io.to(conversationId).emit("receiveMessage", {
           ...newMessage.toObject(),
           name,
