@@ -243,7 +243,7 @@ const getUserDetailsByIds = async (req, res) => {
     }
 };
 
-const getTop10Users = async (req, res) => {
+const getAllUsers = async (req, res) => {
     try {
         const { excludeUserId } = req.query;
         // Kiểm tra excludeUserId hợp lệ
@@ -365,7 +365,7 @@ const getTopUsersExcludingFollowed = async (req, res) => {
         return res.status(500).json({ message: "Failed to fetch suggested users." });
     }
 };
-const getAllUsers = async (req, res) => {
+const getTop10Users = async (req, res) => {
     try {
         const userDetails = await UserDetail.find().sort({ createdAt: -1 });
 
