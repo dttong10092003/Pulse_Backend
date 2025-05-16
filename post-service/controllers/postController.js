@@ -92,7 +92,14 @@ const deletePost = async (req, res) => {
 // Lấy tất cả bài viết (Không yêu cầu đăng nhập)
 const getAllPosts = async (req, res) => {
     try {
-        const posts = await Post.find().sort({ createdAt: -1 });
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const posts = await Post.find()
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
 
         const userIds = [...new Set([
             ...posts.map(p => p.userId.toString()),
@@ -103,9 +110,8 @@ const getAllPosts = async (req, res) => {
             userIds
         });
 
-        const userList = userRes.data;
         const userMap = {};
-        userList.forEach(user => {
+        userRes.data.forEach(user => {
             userMap[user.userId] = user;
         });
 
@@ -122,7 +128,7 @@ const getAllPosts = async (req, res) => {
                             _id: sp._id,
                             content: sp.content,
                             media: sp.media,
-                            username: `${spUser?.firstname || "Ẩn"} ${spUser?.lastname || "Danh"}`,
+                            username: `${spUser?.firstname || "Anomyous"} ${spUser?.lastname || ""}`,
                             avatar: spUser?.avatar || "https://picsum.photos/200"
                         };
                     }
@@ -133,7 +139,7 @@ const getAllPosts = async (req, res) => {
 
             return {
                 ...post.toObject(),
-                username: `${user?.firstname || "Ẩn"} ${user?.lastname || "Danh"}`,
+                username: `${user?.firstname || "Anomyous"} ${user?.lastname || ""}`,
                 avatar: user?.avatar || "https://picsum.photos/200",
                 sharedPost
             };
@@ -144,6 +150,62 @@ const getAllPosts = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+
+// const getAllPosts = async (req, res) => {
+//     try {
+//         const posts = await Post.find().sort({ createdAt: -1 });
+
+//         const userIds = [...new Set([
+//             ...posts.map(p => p.userId.toString()),
+//             ...posts.filter(p => p.sharedPostId).map(p => p.sharedPostId.toString())
+//         ])];
+
+//         const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
+//             userIds
+//         });
+
+//         const userList = userRes.data;
+//         const userMap = {};
+//         userList.forEach(user => {
+//             userMap[user.userId] = user;
+//         });
+
+//         const postsWithUserInfo = await Promise.all(posts.map(async post => {
+//             const user = userMap[post.userId.toString()];
+//             let sharedPost = null;
+
+//             if (post.sharedPostId) {
+//                 try {
+//                     const sp = await Post.findById(post.sharedPostId);
+//                     if (sp) {
+//                         const spUser = userMap[sp.userId.toString()];
+//                         sharedPost = {
+//                             _id: sp._id,
+//                             content: sp.content,
+//                             media: sp.media,
+//                             username: `${spUser?.firstname || "Ẩn"} ${spUser?.lastname || "Danh"}`,
+//                             avatar: spUser?.avatar || "https://picsum.photos/200"
+//                         };
+//                     }
+//                 } catch (err) {
+//                     console.warn("⚠️ Không thể lấy sharedPost:", post.sharedPostId);
+//                 }
+//             }
+
+//             return {
+//                 ...post.toObject(),
+//                 username: `${user?.firstname || "Ẩn"} ${user?.lastname || "Danh"}`,
+//                 avatar: user?.avatar || "https://picsum.photos/200",
+//                 sharedPost
+//             };
+//         }));
+
+//         res.json(postsWithUserInfo);
+//     } catch (err) {
+//         res.status(500).json({ message: err.message });
+//     }
+// };
 
 
 // Lấy bài viết theo ID (Không yêu cầu đăng nhập)
@@ -177,14 +239,14 @@ const getPostById = async (req, res) => {
                 _id: shared._id,
                 content: shared.content,
                 media: shared.media,
-                username: `${sharedUser?.firstname || "Ẩn"} ${sharedUser?.lastname || "Danh"}`,
+                username: `${sharedUser?.firstname || "Anomyous"} ${sharedUser?.lastname || ""}`,
                 avatar: sharedUser?.avatar || "https://picsum.photos/200"
             };
         }
 
         const postWithUser = {
             ...post.toObject(),
-            username: `${user?.firstname || "Ẩn"} ${user?.lastname || "Danh"}`,
+            username: `${user?.firstname || "Anomyous"} ${user?.lastname || ""}`,
             avatar: user?.avatar || "https://picsum.photos/200",
             sharedPost
         };
@@ -254,14 +316,14 @@ const getPostsByUser = async (req, res) => {
                 _id: sp._id,
                 content: sp.content,
                 media: sp.media,
-                username: `${userMap[sp.userId]?.firstname || "Ẩn"} ${userMap[sp.userId]?.lastname || "Danh"}`,
+                username: `${userMap[sp.userId]?.firstname || "Anomyous"} ${userMap[sp.userId]?.lastname || ""}`,
                 avatar: userMap[sp.userId]?.avatar || "https://picsum.photos/200"
             };
         });
 
         const postsWithShared = posts.map(post => ({
             ...post.toObject(),
-            username: `${userMap[post.userId]?.firstname || "Ẩn"} ${userMap[post.userId]?.lastname || "Danh"}`,
+            username: `${userMap[post.userId]?.firstname || "Anomyous"} ${userMap[post.userId]?.lastname || ""}`,
             avatar: userMap[post.userId]?.avatar || "https://picsum.photos/200",
             sharedPost: post.sharedPostId ? sharedPostMap[post.sharedPostId] : null
         }));
