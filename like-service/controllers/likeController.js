@@ -21,15 +21,29 @@ const likePost = async (req, res) => {
         const userId = verifyToken(req);
         const postId = req.params.postId;
 
+        // Kiểm tra đã like chưa
         const existingLike = await Like.findOne({ userId, postId });
+
         if (existingLike) {
-            return res.status(400).json({ message: 'You have already liked this post' });
+            // 👉 Nếu đã like, cập nhật lại timestamp
+            existingLike.timestamp = new Date();
+            await existingLike.save();
+
+            return res.status(200).json({
+                message: 'Like updated with new timestamp',
+                updatedLike: existingLike
+            });
         }
 
+        // Nếu chưa like, tạo like mới
         const newLike = new Like({ postId, userId, timestamp: new Date() });
         await newLike.save();
 
-        res.status(201).json({ message: 'Post liked successfully', newLike });
+        res.status(201).json({
+            message: 'Post liked successfully',
+            newLike
+        });
+
     } catch (err) {
         res.status(err.status || 500).json({ message: err.message });
     }
