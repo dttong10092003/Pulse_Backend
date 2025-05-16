@@ -5,7 +5,7 @@ const { authenticateToken } = require("../middleware/authMiddleware");
 
 router.get('/top-users', userService.getTopUsersExcludingFollowed);
 router.get("/top10-users", userService.getTop10Users); // Lấy danh sách 10 người dùng
-router.get("/get-all-users", userService.getAllUsers);
+router.get("/all", userService.getAllUsers);
 // router.get("/:id", authenticateToken, userService.getUser);
 router.put("/:id", authenticateToken, userService.updateUser);
 router.post("/", authenticateToken, userService.createUserDetail);
