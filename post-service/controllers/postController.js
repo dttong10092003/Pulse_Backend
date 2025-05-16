@@ -281,10 +281,7 @@ const getPostsByUser = async (req, res) => {
         const userId = req.query.userId;
         if (!userId) return res.status(400).json({ message: "Missing userId" });
 
-        const posts = await Post.find({
-            userId,
-            sharedPostId: { $exists: false } // 🔥 loại bỏ các bài share
-        }).sort({ createdAt: -1 });
+        const posts = await Post.find({ userId }).sort({ createdAt: -1 });
 
         // 🧠 Tìm tất cả sharedPostId để truy xuất post gốc
         const sharedPostIds = posts
