@@ -3,12 +3,33 @@ const axios = require("axios");
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL;
 const FOLLOW_SERVICE_URL = process.env.FOLLOW_SERVICE_URL;
 
+// const getUser = async (req, res) => {
+//   try {
+//     const response = await axios.get(`${USER_SERVICE_URL}/users/${req.params.id}`);
+//     res.status(response.status).json(response.data);
+//   } catch (error) {
+//     res.status(error.response?.status || 500).json({ error: error.message });
+//   }
+// };
+
 const getUser = async (req, res) => {
+  const { id } = req.params;
+
+  // Kiểm tra nếu không phải ObjectId thì từ chối luôn
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      error: `Invalid userId: "${id}". This endpoint only accepts MongoDB ObjectIds.`,
+    });
+  }
+
   try {
-    const response = await axios.get(`${USER_SERVICE_URL}/users/${req.params.id}`);
+    const response = await axios.get(`${USER_SERVICE_URL}/users/${id}`);
     res.status(response.status).json(response.data);
   } catch (error) {
-    res.status(error.response?.status || 500).json({ error: error.message });
+    console.error("❌ Error in getUser:", error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || error.message,
+    });
   }
 };
 
