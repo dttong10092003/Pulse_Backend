@@ -365,37 +365,81 @@ const getTopUsersExcludingFollowed = async (req, res) => {
         return res.status(500).json({ message: "Failed to fetch suggested users." });
     }
 };
+// const getAllUsers = async (req, res) => {
+//     try {
+//         const userDetails = await UserDetail.find().sort({ createdAt: -1 });
+
+//         const userIds = userDetails.map(user => user.userId);
+//         if (userIds.length === 0) {
+//             return res.status(200).json([]);
+//         }
+
+//         const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, { userIds });
+   
+//         const userMap = authResponse.data;
+//         if(!userMap) {
+//             console.error("❌ Error fetching usernames from auth-service");
+//         }
+//         console.log("🔹 User map from auth-service:", userMap); // Debug userMap
+//         const result = userDetails.map(user => ({
+//             _id: user.userId.toString(),
+//             firstname: user.firstname,
+//             lastname: user.lastname,
+//             avatar: user.avatar,
+//             username: userMap[user.userId.toString()] || "unknown",
+//         }));
+
+//         res.status(200).json(result);
+//     } catch (error) {
+//         console.error("❌ Error in getAllUsers:", error);
+//         res.status(500).json({ message: "Failed to fetch users" });
+//     }
+// };
+
+
 const getAllUsers = async (req, res) => {
     try {
-        const userDetails = await UserDetail.find().sort({ createdAt: -1 });
+        const { excludeUserId } = req.query;
+        // Kiểm tra excludeUserId hợp lệ
+        let filter = {};
+        if (excludeUserId) {
+            filter = { userId: { $ne: new mongoose.Types.ObjectId(excludeUserId) } };
+        }
 
-        const userIds = userDetails.map(user => user.userId);
+        // Lấy danh sách UserDetail
+        const userDetails = await UserDetail.find(filter)
+            .sort({ createdAt: -1 })
+            .lean();
+        if (!userDetails.length) {
+            return res.status(404).json({ message: "No users found" });
+        }
+        const userIds = userDetails.map((u) => u.userId);
+
+        // Nếu userIds rỗng, return luôn
         if (userIds.length === 0) {
-            return res.status(200).json([]);
+            return res.status(404).json({ message: "No user IDs found" });
         }
-
-        const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, { userIds });
-   
-        const userMap = authResponse.data;
-        if(!userMap) {
-            console.error("❌ Error fetching usernames from auth-service");
+        // Gọi auth-service để lấy danh sách username theo userId
+        const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, {
+            userIds,
+        });
+        if (!authResponse.data) {
+            return res.status(500).json({ message: "Failed to fetch user details from auth-service" });
         }
-        console.log("🔹 User map from auth-service:", userMap); // Debug userMap
-        const result = userDetails.map(user => ({
-            _id: user.userId.toString(),
-            firstname: user.firstname,
-            lastname: user.lastname,
-            avatar: user.avatar,
-            username: userMap[user.userId.toString()] || "unknown",
+        const userMap = authResponse.data; // { userId: username, ... }
+        // Gộp dữ liệu và trả về
+        const result = userDetails.map((detail) => ({
+            _id: detail.userId?.toString(),
+            firstname: detail.firstname,
+            lastname: detail.lastname,
+            avatar: detail.avatar,
+            username: userMap[detail.userId?.toString()] || "unknown",
         }));
-
         res.status(200).json(result);
-    } catch (error) {
-        console.error("❌ Error in getAllUsers:", error);
-        res.status(500).json({ message: "Failed to fetch users" });
+    } catch (err) {
+        console.error("❌ Error in user-service getTop10Users:", err);
+        res.status(500).json({ message: "Failed to fetch top 10 users" });
     }
-};
-
-
+}
 
 module.exports = { getTopUsersExcludingFollowed, getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users, getUserDetails, getAllUsers };

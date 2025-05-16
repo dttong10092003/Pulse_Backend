@@ -123,7 +123,7 @@ const getTopUsersExcludingFollowed = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    const response = await axios.get(`${USER_SERVICE_URL}/users/all`);
+    const response = await axios.get(`${USER_SERVICE_URL}/users/hachisama`);
     res.status(response.status).json(response.data);
   } catch (error) {
     console.error("❌ Error in API Gateway getAllUsers:", error.message);
