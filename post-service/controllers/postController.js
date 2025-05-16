@@ -151,63 +151,6 @@ const getAllPosts = async (req, res) => {
     }
 };
 
-
-// const getAllPosts = async (req, res) => {
-//     try {
-//         const posts = await Post.find().sort({ createdAt: -1 });
-
-//         const userIds = [...new Set([
-//             ...posts.map(p => p.userId.toString()),
-//             ...posts.filter(p => p.sharedPostId).map(p => p.sharedPostId.toString())
-//         ])];
-
-//         const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
-//             userIds
-//         });
-
-//         const userList = userRes.data;
-//         const userMap = {};
-//         userList.forEach(user => {
-//             userMap[user.userId] = user;
-//         });
-
-//         const postsWithUserInfo = await Promise.all(posts.map(async post => {
-//             const user = userMap[post.userId.toString()];
-//             let sharedPost = null;
-
-//             if (post.sharedPostId) {
-//                 try {
-//                     const sp = await Post.findById(post.sharedPostId);
-//                     if (sp) {
-//                         const spUser = userMap[sp.userId.toString()];
-//                         sharedPost = {
-//                             _id: sp._id,
-//                             content: sp.content,
-//                             media: sp.media,
-//                             username: `${spUser?.firstname || "Ẩn"} ${spUser?.lastname || "Danh"}`,
-//                             avatar: spUser?.avatar || "https://picsum.photos/200"
-//                         };
-//                     }
-//                 } catch (err) {
-//                     console.warn("⚠️ Không thể lấy sharedPost:", post.sharedPostId);
-//                 }
-//             }
-
-//             return {
-//                 ...post.toObject(),
-//                 username: `${user?.firstname || "Ẩn"} ${user?.lastname || "Danh"}`,
-//                 avatar: user?.avatar || "https://picsum.photos/200",
-//                 sharedPost
-//             };
-//         }));
-
-//         res.json(postsWithUserInfo);
-//     } catch (err) {
-//         res.status(500).json({ message: err.message });
-//     }
-// };
-
-
 // Lấy bài viết theo ID (Không yêu cầu đăng nhập)
 const getPostById = async (req, res) => {
     try {
@@ -257,23 +200,6 @@ const getPostById = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
-
-
-
-// const getPostById = async (req, res) => {
-//     try {
-//         const post = await Post.findById(req.params.id);
-//         if (!post) {
-//             return res.status(404).json({ message: 'Post not found' });
-//         }
-//         res.json(post);
-//     } catch (err) {
-//         res.status(500).json({ message: err.message });
-//     }
-// };
-
-
-
 
 // Lấy bài viết theo userId (Yêu cầu đăng nhập)
 const getPostsByUser = async (req, res) => {
@@ -335,24 +261,6 @@ const getPostsByUser = async (req, res) => {
     }
 };
 
-
-
-
-
-
-// const getPostsByUser = async (req, res) => {
-//     try {
-//         const userId = req.query.userId;
-//         if (!userId) {
-//             return res.status(400).json({ message: "Missing userId" });
-//         }
-
-//         const posts = await Post.find({ userId }).sort({ createdAt: -1 });
-//         res.json(posts);
-//     } catch (err) {
-//         res.status(500).json({ message: err.message });
-//     }
-// };
 // Sửa bài viết (Yêu cầu đăng nhập & chỉ chủ sở hữu mới chỉnh sửa được)
 const editPost = async (req, res) => {
     try {
@@ -405,5 +313,73 @@ const editPost = async (req, res) => {
     }
 };
 
+const getPostStatistics = async (req, res) => {
+    try {
+      const totalPosts = await Post.countDocuments();
+  
+      // Bài viết hôm nay
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+  
+      const todayPosts = await Post.countDocuments({ createdAt: { $gte: startOfToday } });
+  
+      const reportedPosts = await Post.countDocuments({ tags: "reported" });
+      const hiddenPosts = await Post.countDocuments({ tags: "hidden" });
+  
+      console.log("📌 Total:", totalPosts, "Today:", todayPosts);
 
-module.exports = { createPost, getAllPosts, getPostById, deletePost, getPostsByUser, editPost };
+      // Biểu đồ 7 ngày gần nhất
+      const trendData = [];
+      for (let i = 6; i >= 0; i--) {
+        const from = new Date();
+        from.setDate(from.getDate() - i);
+        from.setHours(0, 0, 0, 0);
+  
+        const to = new Date(from);
+        to.setDate(to.getDate() + 1);
+  
+        const count = await Post.countDocuments({
+          createdAt: { $gte: from, $lt: to },
+        });
+  
+        trendData.push({
+          date: from.toLocaleDateString("vi-VN"),
+          count,
+        });
+      }
+  
+      // Bài viết mới nhất
+      const recentPostsRaw = await Post.find().sort({ createdAt: -1 }).limit(10);
+      const userIds = recentPostsRaw.map(p => p.userId.toString());
+      const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, { userIds });
+  
+      const userMap = {};
+      userRes.data.forEach(u => userMap[u.userId] = u);
+  
+      const recentPosts = recentPostsRaw.map(p => ({
+        _id: p._id,
+        content: p.content,
+        createdAt: p.createdAt,
+        username: `${userMap[p.userId]?.firstname || "Anonymous"} ${userMap[p.userId]?.lastname || ""}`,
+        status: p.tags.includes("reported")
+          ? "reported"
+          : p.tags.includes("hidden")
+          ? "hidden"
+          : "active",
+      }));
+  
+      res.json({
+        totalPosts,
+        todayPosts,
+        reportedPosts,
+        hiddenPosts,
+        postTrend: trendData,
+        recentPosts,
+      });
+    } catch (err) {
+      console.error("❌ getPostStatistics error:", err);
+      res.status(500).json({ message: "Failed to load statistics" });
+    }
+  };
+
+module.exports = { createPost, getAllPosts, getPostById, deletePost, getPostsByUser, editPost, getPostStatistics };

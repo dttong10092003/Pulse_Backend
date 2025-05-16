@@ -62,4 +62,15 @@ const editPost = async (req, res) => {
   }
 };
 
-module.exports = { createPost, getPosts, deletePost, getPostById, getUserPosts, editPost };
+const getPostStatistics = async (req, res) => {
+  try {
+    const response = await axios.get(`${POST_SERVICE_URL}/posts/admin/statistics`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res
+      .status(error.response?.status || 500)
+      .json({ error: error.response?.data?.message || error.message });
+  }
+};
+
+module.exports = { createPost, getPosts, deletePost, getPostById, getUserPosts, editPost, getPostStatistics };
