@@ -365,30 +365,70 @@ const getTopUsersExcludingFollowed = async (req, res) => {
         return res.status(500).json({ message: "Failed to fetch suggested users." });
     }
 };
+// const getAllUsers = async (req, res) => {
+//     try {
+//         const userDetails = await UserDetail.find().sort({ createdAt: -1 });
+
+//         const userIds = userDetails.map(user => user.userId);
+//         if (userIds.length === 0) {
+//             return res.status(200).json([]);
+//         }
+
+//         // const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, { userIds });
+//         const authResponse = await axios.post(`https://pulse-gateway.up.railway.app/auth/batch-usernames`, { userIds });
+//         const userMap = authResponse.data;
+//         if(!userMap) {
+//             console.error("❌ Error fetching usernames from auth-service");
+//         }
+//         console.log("🔹 User map from auth-service:", userMap); // Debug userMap
+//         const result = userDetails.map(user => ({
+//             _id: user.userId.toString(),
+//             firstname: user.firstname,
+//             lastname: user.lastname,
+//             avatar: user.avatar,
+//             username: userMap[user.userId.toString()] || "unknown",
+//         }));
+
+//         res.status(200).json(result);
+//     } catch (error) {
+//         console.error("❌ Error in getAllUsers:", error);
+//         res.status(500).json({ message: "Failed to fetch users" });
+//     }
+// };
+
 const getAllUsers = async (req, res) => {
     try {
+        // 1. Lấy toàn bộ userDetail sắp xếp theo thời gian tạo
         const userDetails = await UserDetail.find().sort({ createdAt: -1 });
 
+        // 2. Lấy ra danh sách userId
         const userIds = userDetails.map(user => user.userId);
+
         if (userIds.length === 0) {
             return res.status(200).json([]);
         }
 
-        const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, { userIds });
+        // 3. Gửi danh sách userId qua auth-service để lấy username
+        const authResponse = await axios.post(`https://pulse-gateway.up.railway.app/auth/batch-usernames`, { userIds });
+
         const userMap = authResponse.data;
 
+        // 4. Gộp dữ liệu từ cả hai nguồn
         const result = userDetails.map(user => ({
             _id: user.userId.toString(),
             firstname: user.firstname,
             lastname: user.lastname,
-            avatar: user.avatar,
-            username: userMap[user.userId.toString()] || "unknown",
+            avatar: user.avatar || '',
+            username: userMap[user.userId.toString()] || 'unknown',
+            gender: user.gender,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
         }));
 
         res.status(200).json(result);
     } catch (error) {
-        console.error("❌ Error in getAllUsers:", error);
-        res.status(500).json({ message: "Failed to fetch users" });
+        console.error("❌ Error in getAllUsers:", error.message, error.stack);
+        res.status(500).json({ error: "Failed to fetch users" });
     }
 };
 
