@@ -243,51 +243,51 @@ const getUserDetailsByIds = async (req, res) => {
     }
 };
 
-const getAllUsers = async (req, res) => {
-    try {
-        const { excludeUserId } = req.query;
-        // Kiểm tra excludeUserId hợp lệ
-        let filter = {};
-        if (excludeUserId) {
-            filter = { userId: { $ne: new mongoose.Types.ObjectId(excludeUserId) } };
-        }
+// const getAllUsers = async (req, res) => {
+//     try {
+//         const { excludeUserId } = req.query;
+//         // Kiểm tra excludeUserId hợp lệ
+//         let filter = {};
+//         if (excludeUserId) {
+//             filter = { userId: { $ne: new mongoose.Types.ObjectId(excludeUserId) } };
+//         }
 
-        // Lấy danh sách UserDetail
-        const userDetails = await UserDetail.find(filter)
-            .sort({ createdAt: -1 })
-            .limit(15)
-            .lean();
-        if (!userDetails.length) {
-            return res.status(404).json({ message: "No users found" });
-        }
-        const userIds = userDetails.map((u) => u.userId);
+//         // Lấy danh sách UserDetail
+//         const userDetails = await UserDetail.find(filter)
+//             .sort({ createdAt: -1 })
+//             .limit(15)
+//             .lean();
+//         if (!userDetails.length) {
+//             return res.status(404).json({ message: "No users found" });
+//         }
+//         const userIds = userDetails.map((u) => u.userId);
 
-        // Nếu userIds rỗng, return luôn
-        if (userIds.length === 0) {
-            return res.status(404).json({ message: "No user IDs found" });
-        }
-        // Gọi auth-service để lấy danh sách username theo userId
-        const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, {
-            userIds,
-        });
-        if (!authResponse.data) {
-            return res.status(500).json({ message: "Failed to fetch user details from auth-service" });
-        }
-        const userMap = authResponse.data; // { userId: username, ... }
-        // Gộp dữ liệu và trả về
-        const result = userDetails.map((detail) => ({
-            _id: detail.userId?.toString(),
-            firstname: detail.firstname,
-            lastname: detail.lastname,
-            avatar: detail.avatar,
-            username: userMap[detail.userId?.toString()] || "unknown",
-        }));
-        res.status(200).json(result);
-    } catch (err) {
-        console.error("❌ Error in user-service getTop10Users:", err);
-        res.status(500).json({ message: "Failed to fetch top 10 users" });
-    }
-};
+//         // Nếu userIds rỗng, return luôn
+//         if (userIds.length === 0) {
+//             return res.status(404).json({ message: "No user IDs found" });
+//         }
+//         // Gọi auth-service để lấy danh sách username theo userId
+//         const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, {
+//             userIds,
+//         });
+//         if (!authResponse.data) {
+//             return res.status(500).json({ message: "Failed to fetch user details from auth-service" });
+//         }
+//         const userMap = authResponse.data; // { userId: username, ... }
+//         // Gộp dữ liệu và trả về
+//         const result = userDetails.map((detail) => ({
+//             _id: detail.userId?.toString(),
+//             firstname: detail.firstname,
+//             lastname: detail.lastname,
+//             avatar: detail.avatar,
+//             username: userMap[detail.userId?.toString()] || "unknown",
+//         }));
+//         res.status(200).json(result);
+//     } catch (err) {
+//         console.error("❌ Error in user-service getTop10Users:", err);
+//         res.status(500).json({ message: "Failed to fetch top 10 users" });
+//     }
+// };
 
 const getUserDetails = async (req, res) => {
     const { userId } = req.params;
@@ -365,7 +365,7 @@ const getTopUsersExcludingFollowed = async (req, res) => {
         return res.status(500).json({ message: "Failed to fetch suggested users." });
     }
 };
-const getTop10Users = async (req, res) => {
+const getAllUsers = async (req, res) => {
     try {
         const userDetails = await UserDetail.find().sort({ createdAt: -1 });
 
@@ -392,4 +392,4 @@ const getTop10Users = async (req, res) => {
     }
 };
 
-module.exports = { getTopUsersExcludingFollowed, getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users, getUserDetails, getAllUsers };
+module.exports = { getTopUsersExcludingFollowed, getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getUserDetails, getAllUsers };
