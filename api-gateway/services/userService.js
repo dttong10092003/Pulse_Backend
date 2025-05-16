@@ -2,8 +2,15 @@ const axios = require("axios");
 
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL;
 const FOLLOW_SERVICE_URL = process.env.FOLLOW_SERVICE_URL;
-
+const mongoose = require("mongoose");
 const getUser = async (req, res) => {
+   if (id === "getAllUser" || id === "get-all-users" || id === "all") {
+    return res.status(400).json({ error: `Invalid userId: ${id}` });
+  }
+   if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ error: "Invalid userId (not ObjectId)" });
+  }
+
   try {
     const response = await axios.get(`${USER_SERVICE_URL}/users/${req.params.id}`);
     res.status(response.status).json(response.data);
@@ -123,7 +130,7 @@ const getTopUsersExcludingFollowed = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    const response = await axios.get(`${USER_SERVICE_URL}/users/getAllUser`);
+    const response = await axios.get(`${USER_SERVICE_URL}/users/get-all-users`);
     res.status(response.status).json(response.data);
   } catch (error) {
     console.error("❌ Error in API Gateway getAllUsers:", error.message);
