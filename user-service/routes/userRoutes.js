@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.get('/top-users',getTopUsersExcludingFollowed);
 router.get('/top10-users', getTop10Users);
-router.get('/get-all-users', getAllUsers);
+router.get('/all', getAllUsers);
 router.post('/check-email-phone', checkEmailOrPhoneExists);
 router.post('/user-details-by-ids', getUserDetailsByIds);
 router.get('/user-details/:userId', getUserDetails);
