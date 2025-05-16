@@ -22,7 +22,7 @@ const io = socketIo(server, {
     credentials: true
   }
 });
- 
+
 
 io.on("connection", (socket) => {
   console.log(`📡 Client connected: ${socket.id}`);
@@ -44,20 +44,29 @@ io.on("connection", (socket) => {
       fromName,
     });
   });
+  
   socket.on("callAccepted", ({ toUserId }) => {
     console.log(`✅ Call accepted, notifying ${toUserId}`);
     io.to(toUserId).emit("callAccepted");
+  });
+
+  socket.on("callTimeout", ({ toUserId }) => {
+    console.log(`⏰ Call timeout →  ${toUserId}`);
+    io.to(toUserId).emit("callTimeout");
   });
 
   socket.on("endCall", ({ toUserId }) => {
     console.log(`📴 Call ended, notifying ${toUserId}`);
     io.to(toUserId).emit("callEnded");
   });
-  
+
 
   socket.on("disconnect", () => {
     console.log(`❌ Client disconnected: ${socket.id}`);
   });
+
+
+
 });
 
 const PORT = process.env.PORT || 8001;
