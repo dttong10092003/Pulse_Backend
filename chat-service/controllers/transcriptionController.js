@@ -19,6 +19,7 @@ exports.transcribeAudio = async (req, res) => {
       'https://api.deepgram.com/v1/listen',
       {
         url: cloudinaryUrl,
+        language: 'vi',
       },
       {
         headers: {
