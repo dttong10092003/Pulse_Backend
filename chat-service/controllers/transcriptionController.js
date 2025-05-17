@@ -15,15 +15,23 @@ exports.transcribeAudio = async (req, res) => {
 
     const cloudinaryUrl = await uploadToCloudinary(buffer, fileName, 'voice_transcriptions');
 
-    const response = await axios({
-      method: 'POST',
-      url: `https://api.deepgram.com/v1/listen?url=${encodeURIComponent(cloudinaryUrl)}&language=vi`,
-      headers: {
-        'Authorization': `Token ${process.env.DEEPGRAM_API_KEY}`,
-        'Content-Type': 'application/json'
+    const response = await axios.post(
+      'https://api.deepgram.com/v1/listen',
+      {
+        url: cloudinaryUrl,
       },
-      data: null 
-    });
+      {
+        headers: {
+          'Authorization': `Token ${process.env.DEEPGRAM_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        params: {
+          model: 'nova-3',
+          smart_format: true,
+          language: 'vi',
+        }
+      }
+    );
 
     const transcript = response.data?.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
 
