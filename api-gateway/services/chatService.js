@@ -263,6 +263,7 @@ const getDeletedConversations = async (req, res) => {
 };
 
 const transcribeVoice = async (req, res) => {
+  console.log("🧠 transcribeVoice Gateway hit!");
   try {
     const response = await axios.post(`${CHAT_SERVICE_URL}/transcription/transcribe`, req.body);
     res.status(response.status).json(response.data);
