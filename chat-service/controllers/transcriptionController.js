@@ -26,7 +26,7 @@ exports.transcribeAudio = async (req, res) => {
           'Content-Type': 'application/json'
         },
         params: {
-          model: 'nova-3',
+          model: 'general',
           smart_format: true,
           language: 'vi',
         }
