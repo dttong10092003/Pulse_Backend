@@ -262,6 +262,16 @@ const getDeletedConversations = async (req, res) => {
   }
 };
 
+const transcribeVoice = async (req, res) => {
+  try {
+    const response = await axios.post(`${CHAT_SERVICE_URL}/transcription/transcribe`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data?.message || error.message });
+  }
+};
+
+
 
 module.exports = {
   updateGroupConversation,
@@ -289,5 +299,6 @@ module.exports = {
   updateUnreadCount,
   updateDeletedAt,
   incrementUnreadCount,
+  transcribeVoice,
   
 };

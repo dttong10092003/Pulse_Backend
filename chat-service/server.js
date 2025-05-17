@@ -6,6 +6,7 @@ const axios = require("axios");
 require("dotenv").config();
 const cors = require("cors");
 
+const transcriptionRoutes = require('./routes/transcriptionRoutes');
 const messageRoutes = require("./routes/messageRoute");
 const conversationRoutes = require("./routes/conversationRoute");
 const deletedConversationRoutes = require("./routes/deletedConversationRoutes");
@@ -40,6 +41,7 @@ mongoose
 app.use("/messages", messageRoutes);
 app.use("/conversations", conversationRoutes);
 app.use("/deleted-conversations", deletedConversationRoutes);
+app.use('/transcription', transcriptionRoutes);
 
 const MAX_MESSAGES = 8;
 const WINDOW_SIZE = 5; // giây
