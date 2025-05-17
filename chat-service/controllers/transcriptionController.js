@@ -4,7 +4,8 @@ const { uploadToCloudinary } = require('../utils/cloudinary');
 
 exports.transcribeAudio = async (req, res) => {
   try {
-    const { audioUrl, fileName = 'voice-message.webm' } = req.body;
+    const { audioUrl } = req.body;
+    const fileName = 'voice-message.wav';
 
     if (!audioUrl || typeof audioUrl !== 'string' || !audioUrl.startsWith('data:')) {
       return res.status(400).json({ error: 'Invalid or missing base64 audio URL' });
