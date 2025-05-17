@@ -39,7 +39,7 @@ router.get('/deleted-conversations/:userId', authenticateToken, chatService.getD
 router.patch('/deleted-conversations/unread-count/increment', authenticateToken, chatService.incrementUnreadCount);
 
 
-router.post('/voice-to-text', authenticateToken, chatService.transcribeVoice);
+router.post('/transcription/transcribe', authenticateToken, chatService.transcribeVoice);
 
 
 
