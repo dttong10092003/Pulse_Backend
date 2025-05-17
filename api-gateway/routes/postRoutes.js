@@ -4,6 +4,7 @@ const postService = require("../services/postService");
 const { authenticateToken } = require("../middleware/authMiddleware");
 
 router.get("/admin/statistics", postService.getPostStatistics);
+router.get("/admin/top-stats", postService.getTopPostStats);
 router.post("/", authenticateToken, postService.createPost);
 router.get("/", postService.getPosts);
 router.delete("/:id", authenticateToken, postService.deletePost);
