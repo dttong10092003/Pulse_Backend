@@ -2,7 +2,10 @@ const Post = require('../models/post');
 const jwt = require('jsonwebtoken');
 const { uploadToCloudinary, deleteFromCloudinaryByUrl } = require('../utils/cloudinary');
 const axios = require('axios');
+const mongoose = require("mongoose");
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL;
+const LIKE_SERVICE_URL = process.env.LIKE_SERVICE_URL;
+const CMT_SERVICE_URL = process.env.CMT_SERVICE_URL;
 // Hàm xác thực JWT và lấy userId
 const verifyToken = (req) => {
     const authHeader = req.headers.authorization;
@@ -325,15 +328,13 @@ const getPostStatistics = async (req, res) => {
   
       const reportedPosts = await Post.countDocuments({ tags: "reported" });
       const hiddenPosts = await Post.countDocuments({ tags: "hidden" });
-  
-      console.log("📌 Total:", totalPosts, "Today:", todayPosts);
 
       // Biểu đồ 7 ngày gần nhất
       const trendData = [];
       for (let i = 6; i >= 0; i--) {
         const from = new Date();
         from.setDate(from.getDate() - i);
-        from.setHours(0, 0, 0, 0);
+        from.setHours(0, 0, 0, 0); 
   
         const to = new Date(from);
         to.setDate(to.getDate() + 1);
@@ -382,4 +383,80 @@ const getPostStatistics = async (req, res) => {
     }
   };
 
-module.exports = { createPost, getAllPosts, getPostById, deletePost, getPostsByUser, editPost, getPostStatistics };
+  const getTopPostStats = async (req, res) => {
+    try {
+      const posts = await Post.find().sort({ createdAt: -1 }).limit(50);
+  
+      const postIds = posts.map((p) => p._id.toString());
+      const userIds = [...new Set(posts.map((p) => p.userId.toString()))];
+  
+      // Gọi các service để lấy số lượt like và comment
+      const [likeRes, commentRes] = await Promise.all([
+        axios.post(`${LIKE_SERVICE_URL}/likes/count-by-posts`, { postIds }),
+        axios.post(`${CMT_SERVICE_URL}/comments/count-by-posts`, { postIds }),
+      ]);
+  
+      const likeMap = likeRes.data || {};
+      const commentMap = commentRes.data || {};
+  
+      // ✅ Đếm số lượt share dựa trên sharedPostId
+      const shareCounts = await Post.aggregate([
+        {
+          $match: {
+            sharedPostId: { $in: postIds.map(id => new mongoose.Types.ObjectId(id)) }
+          }
+        },
+        {
+          $group: {
+            _id: "$sharedPostId",
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+  
+      const shareMap = {};
+      shareCounts.forEach(item => {
+        shareMap[item._id.toString()] = item.count;
+      });
+  
+      // Lấy thông tin user
+      const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
+        userIds,
+      });
+  
+      const users = Array.isArray(userRes.data) ? userRes.data : userRes.data.users || [];
+      const userMap = {};
+      users.forEach((user) => {
+        const key = user.userId || user._id?.toString();
+        if (key) {
+          userMap[key] = `${user.firstname || ""} ${user.lastname || ""}`.trim();
+        }
+      });
+  
+      // Gộp dữ liệu vào từng bài post
+      const enrichedPosts = posts.map((post) => ({
+        id: post._id.toString(),
+        user: userMap[post.userId.toString()] || "Unknown",
+        content: post.content,
+        likes: likeMap[post._id.toString()] || 0,
+        comments: commentMap[post._id.toString()] || 0,
+        shares: shareMap[post._id.toString()] || 0,
+      }));
+  
+      // Lấy top 5 mỗi loại
+      const topLikedPosts = [...enrichedPosts].sort((a, b) => b.likes - a.likes).slice(0, 5);
+      const topCommentedPosts = [...enrichedPosts].sort((a, b) => b.comments - a.comments).slice(0, 5);
+      const topSharedPosts = [...enrichedPosts].sort((a, b) => b.shares - a.shares).slice(0, 5);
+  
+      res.json({
+        topLikedPosts,
+        topCommentedPosts,
+        topSharedPosts,
+      });
+    } catch (err) {
+      console.error("❌ getTopPostStats error:", err.message);
+      res.status(500).json({ message: "Failed to fetch top stats", detail: err.message });
+    }
+  };
+
+module.exports = { createPost, getAllPosts, getPostById, deletePost, getPostsByUser, editPost, getPostStatistics, getTopPostStats };
