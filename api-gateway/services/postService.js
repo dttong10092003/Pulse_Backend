@@ -73,6 +73,7 @@ const getPostStatistics = async (req, res) => {
   }
 };
 
+
 const getTopPostStats = async (req, res) => {
   try {
     const response = await axios.get(`${POST_SERVICE_URL}/posts/admin/top-stats`);
