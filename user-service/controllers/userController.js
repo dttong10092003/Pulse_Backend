@@ -387,6 +387,7 @@ const getAllUsers = async (req, res) => {
         email: user.email,
         avatar: user.avatar,
         dob: user.DOB,
+        phone: user.phoneNumber,
         gender: user.gender,
         username: auth.username || "unknown",
         isActive: auth.isActive ?? null,
