@@ -33,6 +33,15 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    isCountReport: {
+        type: Number,
+        default: 0
+    },
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+
 });
 
 const User = mongoose.model('User', userSchema);
