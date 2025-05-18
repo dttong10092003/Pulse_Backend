@@ -16,7 +16,8 @@ const {
     loginGoogle,
     changePassword,
     getBatchUsernames,
-    getPhoneNumber
+    getPhoneNumber,
+    getBatchUserDetails
 } = require('../controllers/authController');
 
 const router = express.Router();
@@ -65,4 +66,5 @@ router.post('/batch-usernames', getBatchUsernames);
 
 router.get('/phone', getPhoneNumber); // dùng khi Login
 
+router.post('/getDetailUser',getBatchUserDetails)
 module.exports = router;

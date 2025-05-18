@@ -366,30 +366,42 @@ const getTopUsersExcludingFollowed = async (req, res) => {
     }
 };
 const getAllUsers = async (req, res) => {
-    try {
-        const userDetails = await UserDetail.find().sort({ createdAt: -1 });
+  try {
+    const userDetails = await UserDetail.find().sort({ createdAt: -1 });
 
-        const userIds = userDetails.map(user => user.userId);
-        if (userIds.length === 0) {
-            return res.status(200).json([]);
-        }
-
-        const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, { userIds });
-        const userMap = authResponse.data;
-
-        const result = userDetails.map(user => ({
-            _id: user.userId.toString(),
-            firstname: user.firstname,
-            lastname: user.lastname,
-            avatar: user.avatar,
-            username: userMap[user.userId.toString()] || "unknown",
-        }));
-
-        res.status(200).json(result);
-    } catch (error) {
-        console.error("❌ Error in getAllUsers:", error);
-        res.status(500).json({ message: "Failed to fetch users" });
+    const userIds = userDetails.map(user => user.userId);
+    if (userIds.length === 0) {
+      return res.status(200).json([]);
     }
+
+    // Gọi sang auth-service để lấy thông tin trừ password
+    const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/getDetailUser`, { userIds });
+    const userMap = authResponse.data;
+
+    const result = userDetails.map(user => {
+      const auth = userMap[user.userId.toString()] || {};
+
+      return {
+        _id: user.userId.toString(),
+        fullName: `${user.firstname} ${user.lastname}`,
+        email: user.email,
+        avatar: user.avatar,
+        dob: user.DOB,
+        gender: user.gender,
+        username: auth.username || "unknown",
+        isActive: auth.isActive ?? null,
+        isAdmin: auth.isAdmin ?? null,
+        isCountReport: auth.isCountReport ?? 0,
+        createdAt: auth.createdAt || null
+      };
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("❌ Error in getAllUsers:", error);
+    res.status(500).json({ message: "Failed to fetch users" });
+  }
 };
+
 
 module.exports = { getTopUsersExcludingFollowed, getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users, getUserDetails, getAllUsers };

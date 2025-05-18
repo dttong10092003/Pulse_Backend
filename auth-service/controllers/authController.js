@@ -555,6 +555,34 @@ const getPhoneNumber = async (req, res) => {
   }
 };
 
+const getBatchUserDetails = async (req, res) => {
+  try {
+    const { userIds } = req.body;
+
+    if (!Array.isArray(userIds)) {
+      return res.status(400).json({ message: "userIds must be an array" });
+    }
+
+    // Lấy toàn bộ thông tin user theo danh sách _id
+    const users = await User.find({ _id: { $in: userIds } });
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: "No users found" });
+    }
+
+    // Format lại kết quả dạng object: { userId: { ...userData } }
+    const result = {};
+    users.forEach((user) => {
+      result[user._id.toString()] = user;
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("❌ Error in getBatchUserDetails:", error.message);
+    res.status(500).json({ message: "Failed to fetch user details" });
+  }
+};
+
 module.exports = {
   checkUserExists,
   registerUserWithPhone,
@@ -572,5 +600,6 @@ module.exports = {
   loginGoogle,
   changePassword,
   getPhoneNumber,
-  getBatchUsernames
+  getBatchUsernames,
+  getBatchUserDetails,
 };
