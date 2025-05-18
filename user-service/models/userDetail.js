@@ -33,7 +33,8 @@ const userDetailSchema = new mongoose.Schema({
     backgroundAvatar: { 
         type: String,
         default: '',
-    }
+    },
+  
 });
 
 const UserDetail = mongoose.model('usersDetail', userDetailSchema);
