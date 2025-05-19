@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL;
 const LIKE_SERVICE_URL = process.env.LIKE_SERVICE_URL;
 const CMT_SERVICE_URL = process.env.CMT_SERVICE_URL;
+const { checkToxicWithAI } = require("../utils/aiUtils");
 // Hàm xác thực JWT và lấy userId
 const verifyToken = (req) => {
     const authHeader = req.headers.authorization;
@@ -29,37 +30,86 @@ const verifyToken = (req) => {
 };
 
 // Tạo bài viết (Yêu cầu đăng nhập)
+// const createPost = async (req, res) => {
+//     try {
+//         const userId = verifyToken(req);
+//         const { content, media, tags, sharedPostId } = req.body;
+//         if (!Array.isArray(tags) || tags.length === 0) {
+//             tags = ["Beauty"]; // Gán mặc định nếu không có
+//         }
+
+//         let uploadedMedia = [];
+//         if (media && Array.isArray(media)) {
+//             uploadedMedia = await Promise.all(
+//                 media.map((file) => uploadToCloudinary(file, 'posts'))
+//             );
+//         }
+
+//         const newPost = new Post({
+//             userId,
+//             content,
+//             media: uploadedMedia,
+//             tags,
+//             sharedPostId: sharedPostId || null
+//         });
+
+//         await newPost.save();
+//         res.status(201).json(newPost);
+//     } catch (err) {
+//         console.error("❌ createPost error:", err);
+//         res.status(err.status || 500).json({ message: err.message });
+//     }
+// };
+
 const createPost = async (req, res) => {
     try {
-        const userId = verifyToken(req);
-        const { content, media, tags, sharedPostId } = req.body;
-        if (!Array.isArray(tags) || tags.length === 0) {
-            tags = ["Beauty"]; // Gán mặc định nếu không có
-        }
-
-        let uploadedMedia = [];
-        if (media && Array.isArray(media)) {
-            uploadedMedia = await Promise.all(
-                media.map((file) => uploadToCloudinary(file, 'posts'))
-            );
-        }
-
-        const newPost = new Post({
-            userId,
-            content,
-            media: uploadedMedia,
-            tags,
-            sharedPostId: sharedPostId || null
-        });
-
+      const userId = verifyToken(req);
+      let { content, media, tags, sharedPostId } = req.body;
+  
+      if (!Array.isArray(tags) || tags.length === 0) {
+        tags = ["Beauty"];
+      }
+  
+      let uploadedMedia = [];
+      if (media && Array.isArray(media)) {
+        uploadedMedia = await Promise.all(
+          media.map((file) => uploadToCloudinary(file, 'posts'))
+        );
+      }
+  
+      const newPost = new Post({
+        userId,
+        content,
+        media: uploadedMedia,
+        tags,
+        sharedPostId: sharedPostId || null
+      });
+  
+      await newPost.save();
+  
+      // 🚨 Kiểm tra nội dung bằng AI
+      const isToxic = await checkToxicWithAI(content);
+      console.log("🧠 AI kết luận:", isToxic);
+  
+      if (isToxic) {
+        newPost.tags.push("reported");
         await newPost.save();
-        res.status(201).json(newPost);
+      
+        await axios.post(`${process.env.NOTIFICATION_SERVICE_URL}/noti/create`, {
+          type: "report",
+          receiverIds: ["admin"], // hoặc ID admin thật
+          senderId: userId,
+          messageContent: `AI đã phát hiện nội dung phản cảm: "${content}"`,
+          postId: newPost._id.toString(),
+        });
+      }
+  
+      res.status(201).json(newPost);
     } catch (err) {
-        console.error("❌ createPost error:", err);
-        res.status(err.status || 500).json({ message: err.message });
+      console.error("❌ createPost error:", err);
+      res.status(err.status || 500).json({ message: err.message });
     }
-};
-
+  };
 
 // Xóa bài viết (Yêu cầu đăng nhập & chỉ chủ sở hữu mới xóa được)
 const deletePost = async (req, res) => {
@@ -93,82 +143,17 @@ const deletePost = async (req, res) => {
 };
 
 // Lấy tất cả bài viết (Không yêu cầu đăng nhập)
-// const getAllPosts = async (req, res) => {
-//     try {
-//         const page = parseInt(req.query.page) || 1;
-//         const limit = parseInt(req.query.limit) || 10;
-//         const skip = (page - 1) * limit;
-
-//         const posts = await Post.find()
-//             .sort({ createdAt: -1 })
-//             .skip(skip)
-//             .limit(limit);
-
-//         const userIds = [...new Set([
-//             ...posts.map(p => p.userId.toString()),
-//             ...posts.filter(p => p.sharedPostId).map(p => p.sharedPostId.toString())
-//         ])];
-
-//         const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
-//             userIds
-//         });
-
-//         const userMap = {};
-//         userRes.data.forEach(user => {
-//             userMap[user.userId] = user;
-//         });
-
-//         const postsWithUserInfo = await Promise.all(posts.map(async post => {
-//             const user = userMap[post.userId.toString()];
-//             let sharedPost = null;
-
-//             if (post.sharedPostId) {
-//                 try {
-//                     const sp = await Post.findById(post.sharedPostId);
-//                     if (sp) {
-//                         const spUser = userMap[sp.userId.toString()];
-//                         sharedPost = {
-//                             _id: sp._id,
-//                             content: sp.content,
-//                             media: sp.media,
-//                             username: `${spUser?.firstname || "Anomyous"} ${spUser?.lastname || ""}`,
-//                             avatar: spUser?.avatar || "https://picsum.photos/200"
-//                         };
-//                     }
-//                 } catch (err) {
-//                     console.warn("⚠️ Không thể lấy sharedPost:", post.sharedPostId);
-//                 }
-//             }
-
-//             return {
-//                 ...post.toObject(),
-//                 username: `${user?.firstname || "Anomyous"} ${user?.lastname || ""}`,
-//                 avatar: user?.avatar || "https://picsum.photos/200",
-//                 sharedPost
-//             };
-//         }));
-
-//         res.json(postsWithUserInfo);
-//     } catch (err) {
-//         res.status(500).json({ message: err.message });
-//     }
-// };
-// ✅ Sửa lại hàm getAllPosts:
-// ✅ Hàm getAllPosts - hỗ trợ cả phân trang và lấy toàn bộ
 const getAllPosts = async (req, res) => {
     try {
-        const { page, limit } = req.query;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
 
-        let postsQuery = Post.find().sort({ createdAt: -1 });
+        const posts = await Post.find()
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
 
-        if (page && limit) {
-            const skip = (parseInt(page) - 1) * parseInt(limit);
-            postsQuery = postsQuery.skip(skip).limit(parseInt(limit));
-        }
-
-        const posts = await postsQuery;
-
-        // Lấy userId liên quan
         const userIds = [...new Set([
             ...posts.map(p => p.userId.toString()),
             ...posts.filter(p => p.sharedPostId).map(p => p.sharedPostId.toString())
@@ -196,7 +181,7 @@ const getAllPosts = async (req, res) => {
                             _id: sp._id,
                             content: sp.content,
                             media: sp.media,
-                            username: `${spUser?.firstname || "Anonymous"} ${spUser?.lastname || ""}`,
+                            username: `${spUser?.firstname || "Anomyous"} ${spUser?.lastname || ""}`,
                             avatar: spUser?.avatar || "https://picsum.photos/200"
                         };
                     }
@@ -207,7 +192,7 @@ const getAllPosts = async (req, res) => {
 
             return {
                 ...post.toObject(),
-                username: `${user?.firstname || "Anonymous"} ${user?.lastname || ""}`,
+                username: `${user?.firstname || "Anomyous"} ${user?.lastname || ""}`,
                 avatar: user?.avatar || "https://picsum.photos/200",
                 sharedPost
             };
@@ -215,11 +200,9 @@ const getAllPosts = async (req, res) => {
 
         res.json(postsWithUserInfo);
     } catch (err) {
-        console.error("❌ getAllPosts error:", err);
         res.status(500).json({ message: err.message });
     }
 };
-
 
 // Lấy bài viết theo ID (Không yêu cầu đăng nhập)
 const getPostById = async (req, res) => {
@@ -385,145 +368,145 @@ const editPost = async (req, res) => {
 
 const getPostStatistics = async (req, res) => {
     try {
-        const totalPosts = await Post.countDocuments();
+      const totalPosts = await Post.countDocuments();
+  
+      // Bài viết hôm nay
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+  
+      const todayPosts = await Post.countDocuments({ createdAt: { $gte: startOfToday } });
+  
+      const reportedPosts = await Post.countDocuments({ tags: "reported" });
+      const hiddenPosts = await Post.countDocuments({ tags: "hidden" });
 
-        // Bài viết hôm nay
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
-
-        const todayPosts = await Post.countDocuments({ createdAt: { $gte: startOfToday } });
-
-        const reportedPosts = await Post.countDocuments({ tags: "reported" });
-        const hiddenPosts = await Post.countDocuments({ tags: "hidden" });
-
-        // Biểu đồ 7 ngày gần nhất
-        const trendData = [];
-        for (let i = 6; i >= 0; i--) {
-            const from = new Date();
-            from.setDate(from.getDate() - i);
-            from.setHours(0, 0, 0, 0);
-
-            const to = new Date(from);
-            to.setDate(to.getDate() + 1);
-
-            const count = await Post.countDocuments({
-                createdAt: { $gte: from, $lt: to },
-            });
-
-            trendData.push({
-                date: from.toLocaleDateString("vi-VN"),
-                count,
-            });
-        }
-
-        // Bài viết mới nhất
-        const recentPostsRaw = await Post.find().sort({ createdAt: -1 }).limit(10);
-        const userIds = recentPostsRaw.map(p => p.userId.toString());
-        const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, { userIds });
-
-        const userMap = {};
-        userRes.data.forEach(u => userMap[u.userId] = u);
-
-        const recentPosts = recentPostsRaw.map(p => ({
-            _id: p._id,
-            content: p.content,
-            createdAt: p.createdAt,
-            username: `${userMap[p.userId]?.firstname || "Anonymous"} ${userMap[p.userId]?.lastname || ""}`,
-            status: p.tags.includes("reported")
-                ? "reported"
-                : p.tags.includes("hidden")
-                    ? "hidden"
-                    : "active",
-        }));
-
-        res.json({
-            totalPosts,
-            todayPosts,
-            reportedPosts,
-            hiddenPosts,
-            postTrend: trendData,
-            recentPosts,
+      // Biểu đồ 7 ngày gần nhất
+      const trendData = [];
+      for (let i = 6; i >= 0; i--) {
+        const from = new Date();
+        from.setDate(from.getDate() - i);
+        from.setHours(0, 0, 0, 0); 
+  
+        const to = new Date(from);
+        to.setDate(to.getDate() + 1);
+  
+        const count = await Post.countDocuments({
+          createdAt: { $gte: from, $lt: to },
         });
+  
+        trendData.push({
+          date: from.toLocaleDateString("vi-VN"),
+          count,
+        });
+      }
+  
+      // Bài viết mới nhất
+      const recentPostsRaw = await Post.find().sort({ createdAt: -1 }).limit(10);
+      const userIds = recentPostsRaw.map(p => p.userId.toString());
+      const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, { userIds });
+  
+      const userMap = {};
+      userRes.data.forEach(u => userMap[u.userId] = u);
+  
+      const recentPosts = recentPostsRaw.map(p => ({
+        _id: p._id,
+        content: p.content,
+        createdAt: p.createdAt,
+        username: `${userMap[p.userId]?.firstname || "Anonymous"} ${userMap[p.userId]?.lastname || ""}`,
+        status: p.tags.includes("reported")
+          ? "reported"
+          : p.tags.includes("hidden")
+          ? "hidden"
+          : "active",
+      }));
+  
+      res.json({
+        totalPosts,
+        todayPosts,
+        reportedPosts,
+        hiddenPosts,
+        postTrend: trendData,
+        recentPosts,
+      });
     } catch (err) {
-        console.error("❌ getPostStatistics error:", err);
-        res.status(500).json({ message: "Failed to load statistics" });
+      console.error("❌ getPostStatistics error:", err);
+      res.status(500).json({ message: "Failed to load statistics" });
     }
-};
+  };
 
-const getTopPostStats = async (req, res) => {
+  const getTopPostStats = async (req, res) => {
     try {
-        const posts = await Post.find().sort({ createdAt: -1 }).limit(50);
-
-        const postIds = posts.map((p) => p._id.toString());
-        const userIds = [...new Set(posts.map((p) => p.userId.toString()))];
-
-        // Gọi các service để lấy số lượt like và comment
-        const [likeRes, commentRes] = await Promise.all([
-            axios.post(`${LIKE_SERVICE_URL}/likes/count-by-posts`, { postIds }),
-            axios.post(`${CMT_SERVICE_URL}/comments/count-by-posts`, { postIds }),
-        ]);
-
-        const likeMap = likeRes.data || {};
-        const commentMap = commentRes.data || {};
-
-        // ✅ Đếm số lượt share dựa trên sharedPostId
-        const shareCounts = await Post.aggregate([
-            {
-                $match: {
-                    sharedPostId: { $in: postIds.map(id => new mongoose.Types.ObjectId(id)) }
-                }
-            },
-            {
-                $group: {
-                    _id: "$sharedPostId",
-                    count: { $sum: 1 }
-                }
-            }
-        ]);
-
-        const shareMap = {};
-        shareCounts.forEach(item => {
-            shareMap[item._id.toString()] = item.count;
-        });
-
-        // Lấy thông tin user
-        const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
-            userIds,
-        });
-
-        const users = Array.isArray(userRes.data) ? userRes.data : userRes.data.users || [];
-        const userMap = {};
-        users.forEach((user) => {
-            const key = user.userId || user._id?.toString();
-            if (key) {
-                userMap[key] = `${user.firstname || ""} ${user.lastname || ""}`.trim();
-            }
-        });
-
-        // Gộp dữ liệu vào từng bài post
-        const enrichedPosts = posts.map((post) => ({
-            id: post._id.toString(),
-            user: userMap[post.userId.toString()] || "Unknown",
-            content: post.content,
-            likes: likeMap[post._id.toString()] || 0,
-            comments: commentMap[post._id.toString()] || 0,
-            shares: shareMap[post._id.toString()] || 0,
-        }));
-
-        // Lấy top 5 mỗi loại
-        const topLikedPosts = [...enrichedPosts].sort((a, b) => b.likes - a.likes).slice(0, 5);
-        const topCommentedPosts = [...enrichedPosts].sort((a, b) => b.comments - a.comments).slice(0, 5);
-        const topSharedPosts = [...enrichedPosts].sort((a, b) => b.shares - a.shares).slice(0, 5);
-
-        res.json({
-            topLikedPosts,
-            topCommentedPosts,
-            topSharedPosts,
-        });
+      const posts = await Post.find().sort({ createdAt: -1 }).limit(50);
+  
+      const postIds = posts.map((p) => p._id.toString());
+      const userIds = [...new Set(posts.map((p) => p.userId.toString()))];
+  
+      // Gọi các service để lấy số lượt like và comment
+      const [likeRes, commentRes] = await Promise.all([
+        axios.post(`${LIKE_SERVICE_URL}/likes/count-by-posts`, { postIds }),
+        axios.post(`${CMT_SERVICE_URL}/comments/count-by-posts`, { postIds }),
+      ]);
+  
+      const likeMap = likeRes.data || {};
+      const commentMap = commentRes.data || {};
+  
+      // ✅ Đếm số lượt share dựa trên sharedPostId
+      const shareCounts = await Post.aggregate([
+        {
+          $match: {
+            sharedPostId: { $in: postIds.map(id => new mongoose.Types.ObjectId(id)) }
+          }
+        },
+        {
+          $group: {
+            _id: "$sharedPostId",
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+  
+      const shareMap = {};
+      shareCounts.forEach(item => {
+        shareMap[item._id.toString()] = item.count;
+      });
+  
+      // Lấy thông tin user
+      const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
+        userIds,
+      });
+  
+      const users = Array.isArray(userRes.data) ? userRes.data : userRes.data.users || [];
+      const userMap = {};
+      users.forEach((user) => {
+        const key = user.userId || user._id?.toString();
+        if (key) {
+          userMap[key] = `${user.firstname || ""} ${user.lastname || ""}`.trim();
+        }
+      });
+  
+      // Gộp dữ liệu vào từng bài post
+      const enrichedPosts = posts.map((post) => ({
+        id: post._id.toString(),
+        user: userMap[post.userId.toString()] || "Unknown",
+        content: post.content,
+        likes: likeMap[post._id.toString()] || 0,
+        comments: commentMap[post._id.toString()] || 0,
+        shares: shareMap[post._id.toString()] || 0,
+      }));
+  
+      // Lấy top 5 mỗi loại
+      const topLikedPosts = [...enrichedPosts].sort((a, b) => b.likes - a.likes).slice(0, 5);
+      const topCommentedPosts = [...enrichedPosts].sort((a, b) => b.comments - a.comments).slice(0, 5);
+      const topSharedPosts = [...enrichedPosts].sort((a, b) => b.shares - a.shares).slice(0, 5);
+  
+      res.json({
+        topLikedPosts,
+        topCommentedPosts,
+        topSharedPosts,
+      });
     } catch (err) {
-        console.error("❌ getTopPostStats error:", err.message);
-        res.status(500).json({ message: "Failed to fetch top stats", detail: err.message });
+      console.error("❌ getTopPostStats error:", err.message);
+      res.status(500).json({ message: "Failed to fetch top stats", detail: err.message });
     }
-};
+  };
 
 module.exports = { createPost, getAllPosts, getPostById, deletePost, getPostsByUser, editPost, getPostStatistics, getTopPostStats };
