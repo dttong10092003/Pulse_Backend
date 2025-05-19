@@ -154,25 +154,26 @@ const deletePost = async (req, res) => {
 //     }
 // };
 // ✅ Sửa lại hàm getAllPosts:
+// ✅ Hàm getAllPosts - hỗ trợ cả phân trang và lấy toàn bộ
 const getAllPosts = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
+        const { page, limit } = req.query;
 
-        // 🔁 Lấy bài post mới nhất, phân trang
-        const posts = await Post.find()
-            .sort({ createdAt: -1 }) // Quan trọng: từ mới đến cũ
-            .skip(skip)
-            .limit(limit);
+        let postsQuery = Post.find().sort({ createdAt: -1 });
 
-        // 🔁 Lấy userId liên quan
+        if (page && limit) {
+            const skip = (parseInt(page) - 1) * parseInt(limit);
+            postsQuery = postsQuery.skip(skip).limit(parseInt(limit));
+        }
+
+        const posts = await postsQuery;
+
+        // Lấy userId liên quan
         const userIds = [...new Set([
             ...posts.map(p => p.userId.toString()),
             ...posts.filter(p => p.sharedPostId).map(p => p.sharedPostId.toString())
         ])];
 
-        // 🔁 Gọi user-service
         const userRes = await axios.post(`${USER_SERVICE_URL}/users/user-details-by-ids`, {
             userIds
         });
@@ -182,7 +183,6 @@ const getAllPosts = async (req, res) => {
             userMap[user.userId] = user;
         });
 
-        // 🔁 Map bài viết + sharedPost
         const postsWithUserInfo = await Promise.all(posts.map(async post => {
             const user = userMap[post.userId.toString()];
             let sharedPost = null;
@@ -213,13 +213,13 @@ const getAllPosts = async (req, res) => {
             };
         }));
 
-        // ✅ Trả kết quả phân trang về client
         res.json(postsWithUserInfo);
     } catch (err) {
         console.error("❌ getAllPosts error:", err);
         res.status(500).json({ message: err.message });
     }
 };
+
 
 // Lấy bài viết theo ID (Không yêu cầu đăng nhập)
 const getPostById = async (req, res) => {
