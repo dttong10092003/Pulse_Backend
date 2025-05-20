@@ -520,7 +520,10 @@ const getBatchUsernames = async (req, res) => {
     }
 
     // Tìm kiếm username trong User model dựa vào userIds
-    const users = await User.find({ _id: { $in: userIds } }).select("username");
+    const users = await User.find({
+      _id: { $in: userIds },
+      isAdmin: false, // 🔥 Chỉ lấy user không phải admin
+    }).select("username");
 
     if (users.length === 0) {
       return res.status(404).json({ message: "No users found" });
