@@ -365,6 +365,7 @@ const getTopUsersExcludingFollowed = async (req, res) => {
         return res.status(500).json({ message: "Failed to fetch suggested users." });
     }
 };
+
 const getAllUsers = async (req, res) => {
   try {
     const userDetails = await UserDetail.find().sort({ createdAt: -1 });
