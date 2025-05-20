@@ -329,9 +329,7 @@ const getTopUsersExcludingFollowed = async (req, res) => {
         }
 
         const followRes = await axios.get(`${FOLLOW_SERVICE_URL}/follow/followings/${excludeUserId}`);
-
         const followings = followRes.data?.data || [];
-
         const followingIds = followings.map(f => f.user._id);
 
         const userDetails = await UserDetail.find({
@@ -343,21 +341,23 @@ const getTopUsersExcludingFollowed = async (req, res) => {
 
         const userIds = userDetails.map((u) => u.userId);
 
-        // Nếu không có user nào => return luôn
         if (userIds.length === 0) {
-            return res.status(200).json([]);  // Trả về mảng rỗng thay vì gọi auth-service
+            return res.status(200).json([]);
         }
 
         const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, { userIds });
         const userMap = authResponse.data;
 
-        const result = userDetails.map((detail) => ({
-            _id: detail.userId.toString(),
-            firstname: detail.firstname,
-            lastname: detail.lastname,
-            avatar: detail.avatar,
-            username: userMap[detail.userId.toString()] || "unknown",
-        }));
+        // 🔥 Lọc userDetails: chỉ giữ những user có username
+        const result = userDetails
+            .filter(detail => userMap[detail.userId.toString()])
+            .map(detail => ({
+                _id: detail.userId.toString(),
+                firstname: detail.firstname,
+                lastname: detail.lastname,
+                avatar: detail.avatar,
+                username: userMap[detail.userId.toString()],
+            }));
 
         return res.status(200).json(result);
     } catch (error) {
@@ -365,6 +365,7 @@ const getTopUsersExcludingFollowed = async (req, res) => {
         return res.status(500).json({ message: "Failed to fetch suggested users." });
     }
 };
+
 
 const getAllUsers = async (req, res) => {
   try {
