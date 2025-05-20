@@ -596,6 +596,7 @@ const autoBanAndUnbanUsers = async () => {
 
     for (const user of usersToBan) {
       user.isActive = false;
+      user.isCountReport = 0; // ✅ Reset report
       user.dateOpenBan = new Date(now.getTime() + 72 * 60 * 60 * 1000); // 72 giờ sau
       await user.save();
       console.log(`🚫 Banned user ${user.username} until ${user.dateOpenBan.toISOString()}`);
