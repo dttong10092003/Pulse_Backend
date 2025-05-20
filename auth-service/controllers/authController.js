@@ -583,6 +583,44 @@ const getBatchUserDetails = async (req, res) => {
   }
 };
 
+
+const autoBanAndUnbanUsers = async () => {
+  try {
+    const now = new Date();
+
+    // 1. Ban users có report >= 3
+    const usersToBan = await User.find({
+      isCountReport: { $gte: 3 },
+      isActive: true
+    });
+
+    for (const user of usersToBan) {
+      user.isActive = false;
+      user.dateOpenBan = new Date(now.getTime() + 72 * 60 * 60 * 1000); // 72 giờ sau
+      await user.save();
+      console.log(`🚫 Banned user ${user.username} until ${user.dateOpenBan.toISOString()}`);
+    }
+
+    // 2. Unban users đã hết hạn
+    const usersToUnban = await User.find({
+      isActive: false,
+      dateOpenBan: { $lte: now }
+    });
+
+    for (const user of usersToUnban) {
+      user.isActive = true;
+      user.dateOpenBan = null;
+      await user.save();
+      console.log(`✅ Unbanned user ${user.username}`);
+    }
+
+    console.log(`🛡️ Ban/Unban check complete. ${usersToBan.length} banned, ${usersToUnban.length} unbanned.`);
+  } catch (err) {
+    console.error("❌ Error in autoBanAndUnbanUsers:", err.message);
+  }
+};
+
+
 module.exports = {
   checkUserExists,
   registerUserWithPhone,
@@ -602,4 +640,5 @@ module.exports = {
   getPhoneNumber,
   getBatchUsernames,
   getBatchUserDetails,
+  autoBanAndUnbanUsers
 };

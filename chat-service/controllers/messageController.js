@@ -228,6 +228,8 @@ exports.sendMessage = async ({ conversationId, senderId, type, content, timestam
   }
 };
 
+
+
 // // 📌 Gửi tin nhắn và cập nhật Redis
 // exports.sendMessage = async (req, res) => {
 //   try {
@@ -307,3 +309,13 @@ exports.getUnreadCount = async (req, res) => {
   }
 };
 
+// get all message meta
+exports.getAllMessageMeta = async () => {
+  try {
+    const messages = await Message.find({}, 'timestamp senderId conversationId').lean();
+    return messages;
+  } catch (error) {
+    console.error('❌ Lỗi khi lấy danh sách tin nhắn:', error.message);
+    throw new Error(error.message);
+  }
+};
