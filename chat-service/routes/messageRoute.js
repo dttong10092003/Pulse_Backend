@@ -1,8 +1,7 @@
 const express = require('express');
-const { sendMessage, getMessages, getRecentImages, getRecentFiles, pinMessage, unpinMessage, getPinnedMessages, revokeMessage, deleteMessage ,getUnreadCount , getAllMessageMeta} = require('../controllers/messageController');
+const { sendMessage, getMessages, getRecentImages, getRecentFiles, pinMessage, unpinMessage, getPinnedMessages, revokeMessage, deleteMessage ,getUnreadCount} = require('../controllers/messageController');
 
 const router = express.Router();
-router.get('/all-messages', getAllMessageMeta);
 router.get('/:conversationId', getMessages);
 router.post('/send', sendMessage);
 router.get('/images/:conversationId', getRecentImages);
