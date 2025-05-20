@@ -5,7 +5,7 @@ const notificationSchema = new mongoose.Schema({
     type: { 
         type: String, 
         required: true, 
-        enum: ['message', 'like', 'comment', 'follow'] // ➕ thêm 'follow'
+        enum: ['message', 'like', 'comment', 'follow','report'] // ➕ thêm 'follow'
     },
 
     receiverId: { type: String, required: true },   // Người nhận thông báo

@@ -41,7 +41,10 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
-
+    dateOpenBan: {
+        type: Date,
+        default: null
+    },
 });
 
 const User = mongoose.model('User', userSchema);
