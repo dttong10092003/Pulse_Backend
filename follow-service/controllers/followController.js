@@ -161,7 +161,7 @@ const getFollowings = async (req, res) => {
           firstname: userMap[f.followingId.toString()]?.firstname || '',
           lastname: userMap[f.followingId.toString()]?.lastname || '',
           avatar: userMap[f.followingId.toString()]?.avatar || '',
-          username: usernameMap[f.followingId.toString()] || '',
+          username: usernameMap[f.followingId.toString()]?.username || '',
         },
         createdAt: f.createdAt
       }));
