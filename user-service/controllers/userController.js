@@ -328,36 +328,39 @@ const getTopUsersExcludingFollowed = async (req, res) => {
             return res.status(400).json({ message: "Invalid excludeUserId" });
         }
 
+        // Lấy danh sách những người mà user này đã follow
         const followRes = await axios.get(`${FOLLOW_SERVICE_URL}/follow/followings/${excludeUserId}`);
-
         const followings = followRes.data?.data || [];
-
         const followingIds = followings.map(f => f.user._id);
 
+        // Tìm userDetail không nằm trong danh sách followings + không phải chính user hiện tại + không phải admin
         const userDetails = await UserDetail.find({
             userId: {
                 $ne: new mongoose.Types.ObjectId(excludeUserId),
                 $nin: followingIds.map(id => new mongoose.Types.ObjectId(id))
             }
-        }).sort({ createdAt: -1 }).lean();
+        }).lean();
 
-        const userIds = userDetails.map((u) => u.userId);
+        const userIds = userDetails.map(u => u.userId);
 
         // Nếu không có user nào => return luôn
         if (userIds.length === 0) {
-            return res.status(200).json([]);  // Trả về mảng rỗng thay vì gọi auth-service
+            return res.status(200).json([]);
         }
 
+        // Gọi sang auth-service để lấy thông tin username + lọc bỏ user là admin
         const authResponse = await axios.post(`${AUTH_SERVICE_URL}/auth/batch-usernames`, { userIds });
         const userMap = authResponse.data;
 
-        const result = userDetails.map((detail) => ({
-            _id: detail.userId.toString(),
-            firstname: detail.firstname,
-            lastname: detail.lastname,
-            avatar: detail.avatar,
-            username: userMap[detail.userId.toString()] || "unknown",
-        }));
+        const result = userDetails
+            .filter(detail => userMap[detail.userId.toString()]?.isAdmin !== true)
+            .map(detail => ({
+                _id: detail.userId.toString(),
+                firstname: detail.firstname,
+                lastname: detail.lastname,
+                avatar: detail.avatar,
+                username: userMap[detail.userId.toString()] || "unknown",
+            }));
 
         return res.status(200).json(result);
     } catch (error) {
@@ -365,6 +368,7 @@ const getTopUsersExcludingFollowed = async (req, res) => {
         return res.status(500).json({ message: "Failed to fetch suggested users." });
     }
 };
+
 const getAllUsers = async (req, res) => {
   try {
     const userDetails = await UserDetail.find().sort({ createdAt: -1 });
