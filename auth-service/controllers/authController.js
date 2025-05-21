@@ -624,6 +624,28 @@ const autoBanAndUnbanUsers = async () => {
   }
 };
 
+const increaseReportCount = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.isCountReport = (user.isCountReport || 0) + 1;
+    await user.save();
+
+    res.status(200).json({
+      message: "Report count increased",
+      isCountReport: user.isCountReport
+    });
+  } catch (error) {
+    console.error("❌ Error in increaseReportCount:", error.message);
+    res.status(500).json({ message: "Server error while updating report count" });
+  }
+};
+
 
 module.exports = {
   checkUserExists,
@@ -644,5 +666,6 @@ module.exports = {
   getPhoneNumber,
   getBatchUsernames,
   getBatchUserDetails,
-  autoBanAndUnbanUsers
+  autoBanAndUnbanUsers,
+  increaseReportCount,
 };
