@@ -194,7 +194,22 @@ const increaseReportCount = async (req, res) => {
     });
   }
 };
-module.exports = { checkUser, registerWithPhone, loginWithGoogleRegister, loginWithUsername, 
+
+const getBanStatus = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const response = await axios.get(`${AUTH_SERVICE_URL}/auth/ban-status/${userId}`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    console.error("❌ Error in getBanStatus :", error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || error.message,
+    });
+  }
+};
+
+module.exports = { checkUser, registerWithPhone, loginWithGoogleRegister, loginWithUsername, getBanStatus,
   checkEmailOrPhone, sendResetPasswordToEmail, 
   resetPasswordWithToken, resetPasswordWithPhone, getMe, getUsernameById, sendEmailOtp, verifyEmailOtp, loginGoogle, changePassword,getBatchUsernames,getPhoneNumber ,getBatchUserDetails ,
 increaseReportCount,
