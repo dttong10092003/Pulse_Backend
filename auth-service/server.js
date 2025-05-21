@@ -30,7 +30,7 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
     } catch (err) {
       console.error("❌ Recurring autoBan critical error:", err.message);
     }
-  }, 60 * 60 * 1000);
+  },60*60* 1000);
 
 }).catch((err) => {
   console.error("🚫 MongoDB connection error:", err);

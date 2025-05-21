@@ -62,6 +62,8 @@ const createPost = async (req, res) => {
       if (isToxic) {
         newPost.tags.push("reported");
         await newPost.save();
+        
+        
       
         await axios.post(`${process.env.NOTIFICATION_SERVICE_URL}/noti/create`, {
           type: "report",
