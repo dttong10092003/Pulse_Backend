@@ -29,38 +29,6 @@ const verifyToken = (req) => {
     }
 };
 
-// Tạo bài viết (Yêu cầu đăng nhập)
-// const createPost = async (req, res) => {
-//     try {
-//         const userId = verifyToken(req);
-//         const { content, media, tags, sharedPostId } = req.body;
-//         if (!Array.isArray(tags) || tags.length === 0) {
-//             tags = ["Beauty"]; // Gán mặc định nếu không có
-//         }
-
-//         let uploadedMedia = [];
-//         if (media && Array.isArray(media)) {
-//             uploadedMedia = await Promise.all(
-//                 media.map((file) => uploadToCloudinary(file, 'posts'))
-//             );
-//         }
-
-//         const newPost = new Post({
-//             userId,
-//             content,
-//             media: uploadedMedia,
-//             tags,
-//             sharedPostId: sharedPostId || null
-//         });
-
-//         await newPost.save();
-//         res.status(201).json(newPost);
-//     } catch (err) {
-//         console.error("❌ createPost error:", err);
-//         res.status(err.status || 500).json({ message: err.message });
-//     }
-// };
-
 const createPost = async (req, res) => {
     try {
       const userId = verifyToken(req);
