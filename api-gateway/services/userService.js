@@ -134,4 +134,5 @@ const getAllUsers = async (req, res) => {
 };
 
 
-module.exports = { getUser, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users,getTopUsersExcludingFollowed,getAllUsers };
+
+module.exports = { getUser, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users,getTopUsersExcludingFollowed,getAllUsers, };

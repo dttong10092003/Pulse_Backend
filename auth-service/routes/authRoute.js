@@ -18,7 +18,7 @@ const {
     getBatchUsernames,
     getPhoneNumber,
     getBatchUserDetails,
-    autoBanAndUnbanUsers
+    autoBanAndUnbanUsers,increaseReportCount
 } = require('../controllers/authController');
 
 const router = express.Router();
@@ -68,5 +68,5 @@ router.post('/batch-usernames', getBatchUsernames);
 router.get('/phone', getPhoneNumber); // dùng khi Login
 
 router.post('/getDetailUser',getBatchUserDetails)
-
+router.post('/increase-report/:userId', increaseReportCount); // dùng khi Login
 module.exports = router;
