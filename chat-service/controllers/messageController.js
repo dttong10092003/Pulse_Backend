@@ -209,17 +209,6 @@ exports.sendMessage = async ({ conversationId, senderId, type, content, timestam
     const newMessage = new Message({ conversationId, senderId, type, content: fileUrl, timestamp, isDeleted, isPinned });
     await newMessage.save();
 
-    // try{
-    //   // Cập nhật Redis: Xóa cache tin nhắn cũ để tải lại tin mới nhất
-    // await redisClient.del(`messages:${conversationId}`);
-
-    // // Cập nhật danh sách cuộc trò chuyện gần đây của user
-    // await redisClient.zAdd(`recentChats:${senderId}`, { score: Date.now(), value: conversationId });
-    // } catch (redisError) {
-    //   console.warn('⚠️ Redis error:', redisError.message);
-    // }
-    
-
     return newMessage;
   } catch (error) {
     console.error('Error sending message:', error);
@@ -227,40 +216,6 @@ exports.sendMessage = async ({ conversationId, senderId, type, content, timestam
     throw new Error(error.message);
   }
 };
-
-
-
-// // 📌 Gửi tin nhắn và cập nhật Redis
-// exports.sendMessage = async (req, res) => {
-//   try {
-//     const { conversationId, senderId, type, content, timestamp, isDeleted, isPinned } = req.body;
-//     let fileUrl = content;
-
-//     if(type === 'image' || type === 'file' || type === 'video' || type === 'audio'){
-//       const file = req.files?.file;
-//       if(file){
-//         const cloudinaryResponse = await uploadToCloudinary(file.data, "chat_files");
-//         fileUrl = cloudinaryResponse;
-//       } else {
-//         return res.status(400).json({ message: "No file uploaded" });
-//       }
-//     }
-
-//     const newMessage = new Message({ conversationId, senderId, type, content: fileUrl, timestamp, isDeleted, isPinned });
-//     await newMessage.save();
-
-//     // Cập nhật Redis: Xóa cache tin nhắn cũ để tải lại tin mới nhất
-//     await redisClient.del(`messages:${conversationId}`);
-
-//     // Cập nhật danh sách cuộc trò chuyện gần đây của user
-//     await redisClient.zAdd(`recentChats:${senderId}`, { score: Date.now(), value: conversationId });
-
-//     res.status(201).json(newMessage);
-//   } catch (error) {
-//     console.error('Error sending message:', error);
-//     res.status(500).json({ error: error.message });
-//   }
-// };
 
 // 📌 Lấy tin nhắn (tận dụng Redis cache)
 exports.getMessages = async (req, res) => {
