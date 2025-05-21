@@ -19,5 +19,6 @@ router.post("/change-password", authService.changePassword);
 router.post("/batch-usernames", authService.getBatchUsernames); // Lấy danh sách username từ danh sách userId
 router.get("/phone", authService.getPhoneNumber);
 router.post("/getDetailUser", authService.getBatchUserDetails); // Lấy danh sách user details từ danh sách userId
-router.post("/increase-report/:userId", authService.increaseReportCount); // Tự động ban/unban người dùng
+router.post("/increase-report/:userId", authService.increaseReportCount); 
+router.get("/ban-status/:userId", authService.getBanStatus); 
 module.exports = router;

@@ -646,6 +646,25 @@ const increaseReportCount = async (req, res) => {
   }
 };
 
+const getBanStatus = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId).select("isActive dateOpenBan");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      isActive: user.isActive,
+      dateOpenBan: user.dateOpenBan,
+    });
+  } catch (error) {
+    console.error("❌ Error in getBanStatus:", error.message);
+    return res.status(500).json({ message: "Server error while fetching user status" });
+  }
+};
 
 module.exports = {
   checkUserExists,
@@ -668,4 +687,5 @@ module.exports = {
   getBatchUserDetails,
   autoBanAndUnbanUsers,
   increaseReportCount,
+  getBanStatus,
 };
