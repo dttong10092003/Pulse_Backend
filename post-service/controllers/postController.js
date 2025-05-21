@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL;
 const LIKE_SERVICE_URL = process.env.LIKE_SERVICE_URL;
 const CMT_SERVICE_URL = process.env.CMT_SERVICE_URL;
+
 const { checkToxicWithAI } = require("../utils/aiUtils");
 // Hàm xác thực JWT và lấy userId
 const verifyToken = (req) => {
@@ -29,43 +30,11 @@ const verifyToken = (req) => {
     }
 };
 
-// Tạo bài viết (Yêu cầu đăng nhập)
-// const createPost = async (req, res) => {
-//     try {
-//         const userId = verifyToken(req);
-//         const { content, media, tags, sharedPostId } = req.body;
-//         if (!Array.isArray(tags) || tags.length === 0) {
-//             tags = ["Beauty"]; // Gán mặc định nếu không có
-//         }
-
-//         let uploadedMedia = [];
-//         if (media && Array.isArray(media)) {
-//             uploadedMedia = await Promise.all(
-//                 media.map((file) => uploadToCloudinary(file, 'posts'))
-//             );
-//         }
-
-//         const newPost = new Post({
-//             userId,
-//             content,
-//             media: uploadedMedia,
-//             tags,
-//             sharedPostId: sharedPostId || null
-//         });
-
-//         await newPost.save();
-//         res.status(201).json(newPost);
-//     } catch (err) {
-//         console.error("❌ createPost error:", err);
-//         res.status(err.status || 500).json({ message: err.message });
-//     }
-// };
-
 const createPost = async (req, res) => {
     try {
       const userId = verifyToken(req);
       let { content, media, tags, sharedPostId } = req.body;
-  
+      console.log()
       if (!Array.isArray(tags) || tags.length === 0) {
         tags = ["Beauty"];
       }
@@ -95,7 +64,7 @@ const createPost = async (req, res) => {
         newPost.tags.push("reported");
         await newPost.save();
         
-        
+        await axios.post(`${process.env.AUTH_SERVICE_URL}/auth/increase-report/${userId}`);
       
         await axios.post(`${process.env.NOTIFICATION_SERVICE_URL}/noti/create`, {
           type: "report",
