@@ -181,7 +181,22 @@ const getBatchUserDetails = async (req, res) => {
   }
 };
 
+const increaseReportCount = async (req, res) => {
+  try {
+    const { userId } = req.params;
 
+    const response = await axios.post(`${AUTH_SERVICE_URL}/auth/increase-report/${userId}`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    console.error("❌ Error in increaseReportCount:", error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || error.message,
+    });
+  }
+};
 module.exports = { checkUser, registerWithPhone, loginWithGoogleRegister, loginWithUsername, 
   checkEmailOrPhone, sendResetPasswordToEmail, 
-  resetPasswordWithToken, resetPasswordWithPhone, getMe, getUsernameById, sendEmailOtp, verifyEmailOtp, loginGoogle, changePassword,getBatchUsernames,getPhoneNumber ,getBatchUserDetails };
+  resetPasswordWithToken, resetPasswordWithPhone, getMe, getUsernameById, sendEmailOtp, verifyEmailOtp, loginGoogle, changePassword,getBatchUsernames,getPhoneNumber ,getBatchUserDetails ,
+increaseReportCount,
+
+};
