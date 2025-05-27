@@ -133,6 +133,29 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+const getUserDetailsByPhoneNumbers = async (req, res) => {
+  try {
+    const { phoneNumbers } = req.body;
+
+    if (!Array.isArray(phoneNumbers) || phoneNumbers.length === 0) {
+      return res.status(400).json({ message: "Danh sách số điện thoại không hợp lệ" });
+    }
+
+    const response = await axios.post(
+      `${USER_SERVICE_URL}/users/by-phone-numbers`,
+      { phoneNumbers }
+    );
+
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    console.error("❌ Error in API Gateway getUserDetailsByPhoneNumbers:", error.message);
+    res.status(error.response?.status || 500).json({
+      message: error.response?.data?.message || "Internal server error",
+    });
+  }
+};
 
 
-module.exports = { getUser, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users,getTopUsersExcludingFollowed,getAllUsers, };
+
+
+module.exports = {getUserDetailsByPhoneNumbers, getUser, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users,getTopUsersExcludingFollowed,getAllUsers, };
