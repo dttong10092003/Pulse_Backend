@@ -406,25 +406,50 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+// const getUserDetailsByPhoneNumbers = async (req, res) => {
+//   try {
+//     const { phoneNumbers } = req.body;
+
+//     if (!Array.isArray(phoneNumbers) || phoneNumbers.length === 0) {
+//       return res.status(400).json({ message: "Danh sách số điện thoại không hợp lệ" });
+//     }
+
+//     // Tìm user có số điện thoại nằm trong mảng phoneNumbers
+//     const users = await UserDetail.find({
+//       phoneNumber: { $in: phoneNumbers },
+//     });
+
+//     res.status(200).json(users);
+//   } catch (error) {
+//     console.error("Lỗi khi lấy userDetails:", error);
+//     res.status(500).json({ message: "Lỗi server" });
+//   }
+// };
+
 const getUserDetailsByPhoneNumbers = async (req, res) => {
-  try {
-    const { phoneNumbers } = req.body;
-
-    if (!Array.isArray(phoneNumbers) || phoneNumbers.length === 0) {
-      return res.status(400).json({ message: "Danh sách số điện thoại không hợp lệ" });
+    try {
+      const { phoneNumbers, currentUserId } = req.body;
+  
+      if (!Array.isArray(phoneNumbers) || phoneNumbers.length === 0) {
+        return res.status(400).json({ message: "Danh sách số điện thoại không hợp lệ" });
+      }
+  
+      if (!currentUserId) {
+        return res.status(400).json({ message: "Thiếu userId hiện tại" });
+      }
+  
+      // Tìm user có số điện thoại nằm trong danh sách, nhưng loại trừ người dùng hiện tại
+      const users = await UserDetail.find({
+        phoneNumber: { $in: phoneNumbers },
+        userId: { $ne: currentUserId }, // Loại bỏ user đang đăng nhập
+      });
+  
+      res.status(200).json(users);
+    } catch (error) {
+      console.error("Lỗi khi lấy userDetails:", error);
+      res.status(500).json({ message: "Lỗi server" });
     }
-
-    // Tìm user có số điện thoại nằm trong mảng phoneNumbers
-    const users = await UserDetail.find({
-      phoneNumber: { $in: phoneNumbers },
-    });
-
-    res.status(200).json(users);
-  } catch (error) {
-    console.error("Lỗi khi lấy userDetails:", error);
-    res.status(500).json({ message: "Lỗi server" });
-  }
-};
+  };  
 
 
 module.exports = {getUserDetailsByPhoneNumbers, getTopUsersExcludingFollowed, getUserById, updateUser, createUserDetail, checkEmailOrPhoneExists, getUserByEmail, getUserDetailsByIds, getTop10Users, getUserDetails, getAllUsers };
