@@ -44,11 +44,19 @@ io.on("connection", (socket) => {
       fromName,
     });
   });
-  
-  socket.on("callAccepted", ({ toUserId }) => {
-    console.log(`✅ Call accepted, notifying ${toUserId}`);
+
+  socket.on("callAccepted", ({ toUserId, fromUserId }) => {
+    console.log(`✅ Call accepted: from ${fromUserId} → to ${toUserId}`);
+
+    // 🔁 Giữ nguyên sự kiện cũ cho Web
     io.to(toUserId).emit("callAccepted");
+
+    // ✅ Thêm sự kiện riêng cho Mobile
+    io.to(toUserId).emit("callAcceptedMobile", {
+      fromUserId,
+    });
   });
+
 
   socket.on("callTimeout", ({ toUserId }) => {
     console.log(`⏰ Call timeout →  ${toUserId}`);
