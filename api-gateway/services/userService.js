@@ -135,15 +135,19 @@ const getAllUsers = async (req, res) => {
 
 const getUserDetailsByPhoneNumbers = async (req, res) => {
   try {
-    const { phoneNumbers } = req.body;
+    const { phoneNumbers, currentUserId } = req.body;
 
     if (!Array.isArray(phoneNumbers) || phoneNumbers.length === 0) {
       return res.status(400).json({ message: "Danh sách số điện thoại không hợp lệ" });
     }
 
+    if (!currentUserId) {
+      return res.status(400).json({ message: "Thiếu userId hiện tại" });
+    }
+    
     const response = await axios.post(
       `${USER_SERVICE_URL}/users/by-phone-numbers`,
-      { phoneNumbers }
+      { phoneNumbers, currentUserId } // truyền xuống service
     );
 
     res.status(response.status).json(response.data);
